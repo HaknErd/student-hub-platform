@@ -135,6 +135,40 @@ CREATE TABLE community.feedback (
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
+-- Anonymous issue reporting system (similar to feedback but with more structure)
+CREATE TABLE community.report_categories (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    name VARCHAR(50) UNIQUE NOT NULL, -- e.g., 'bullying', 'academic', 'facilities', 'safety'
+    description TEXT,
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE TABLE community.reports (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    category_id UUID REFERENCES community.report_categories(id),
+    title TEXT NOT NULL, -- Brief summary of the issue
+    description TEXT NOT NULL, -- Detailed description
+    location TEXT, -- Where it happened (optional)
+    reported_at TIMESTAMPTZ, -- When the incident occurred (optional)
+    
+    -- Anonymous by default, but can provide contact for follow-up
+    reporter_email VARCHAR(255), -- Optional contact for follow-up
+    reporter_name VARCHAR(100), -- Optional name
+    
+    -- Triage and resolution tracking
+    priority VARCHAR(20) DEFAULT 'medium', -- 'low', 'medium', 'high', 'critical'
+    status VARCHAR(20) DEFAULT 'submitted', -- 'submitted', 'under_review', 'investigating', 'resolved', 'closed'
+    
+    -- Assignment and resolution
+    assigned_to UUID REFERENCES identity.users(id), -- Prefect/admin assigned to handle
+    resolution_notes TEXT, -- How it was resolved
+    resolved_at TIMESTAMPTZ,
+    
+    -- Metadata
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
 -- ----------------------------------------------------------------------------
 -- 5. STUDENT LIFE MODULE
 -- Personal timetables, conduct records, and progress tracking.
@@ -167,4 +201,6 @@ CREATE INDEX idx_resources_type ON academic.resources(type_id);
 CREATE INDEX idx_events_start_time ON calendar.events(start_time);
 CREATE INDEX idx_articles_status_published ON community.articles(status, published_at);
 CREATE INDEX idx_feedback_status ON community.feedback(status);
+CREATE INDEX idx_reports_status_priority ON community.reports(status, priority);
+CREATE INDEX idx_reports_category ON community.reports(category_id);
 CREATE INDEX idx_user_roles_user ON identity.user_roles(user_id);
