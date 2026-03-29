@@ -63,6 +63,8 @@ CREATE TABLE academic.resources (
     subject_id UUID REFERENCES academic.subjects(id),
     type_id UUID REFERENCES academic.resource_types(id),
     file_url TEXT, -- Link to S3/Cloud storage
+    file_size BIGINT, -- File size in bytes
+    content_hash VARCHAR(64), -- SHA-256 hash for cache invalidation
     metadata JSONB, -- Future-proof: store year, exam board, difficulty here
     author_id UUID REFERENCES identity.users(id),
     is_verified BOOLEAN DEFAULT FALSE, -- For prefect/teacher approval workflow
@@ -102,8 +104,13 @@ CREATE TABLE calendar.subscriptions (
     user_id UUID REFERENCES identity.users(id),
     name TEXT NOT NULL, -- 'My School Schedule'
     external_url TEXT NOT NULL, -- The external .ics URL
+    last_content_hash VARCHAR(64), -- Hash of last fetched content for change detection
+    last_modified_header TEXT, -- Store Last-Modified header from external server
+    etag_header TEXT, -- Store ETag header from external server
     last_synced_at TIMESTAMPTZ,
     refresh_interval_minutes INT DEFAULT 60,
+    sync_attempts INT DEFAULT 0,
+    last_sync_error TEXT,
     is_active BOOLEAN DEFAULT TRUE,
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
@@ -198,7 +205,10 @@ CREATE TABLE student_life.conduct_records (
 -- ----------------------------------------------------------------------------
 CREATE INDEX idx_resources_subject ON academic.resources(subject_id);
 CREATE INDEX idx_resources_type ON academic.resources(type_id);
+CREATE INDEX idx_resources_hash ON academic.resources(content_hash);
 CREATE INDEX idx_events_start_time ON calendar.events(start_time);
+CREATE INDEX idx_subscriptions_hash ON calendar.subscriptions(last_content_hash);
+CREATE INDEX idx_subscriptions_active ON calendar.subscriptions(is_active, last_synced_at);
 CREATE INDEX idx_articles_status_published ON community.articles(status, published_at);
 CREATE INDEX idx_feedback_status ON community.feedback(status);
 CREATE INDEX idx_reports_status_priority ON community.reports(status, priority);

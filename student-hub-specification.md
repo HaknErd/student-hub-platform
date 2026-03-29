@@ -131,6 +131,147 @@ The application follows a **Jamstack** (JavaScript, APIs, Markup) approach:
 - **Cost**: Lower hosting costs, especially for student projects
 - **Reliability**: No server maintenance during school holidays
 
+### Caching Strategy
+The system implements multiple layers of caching with content hashing for efficient updates:
+
+#### 1. **Frontend Asset Caching**
+- **Content Hash URLs**: `main.js?hash=abc123` → Cache forever, bust on change
+- **SvelteKit Adapter**: Static generation with hash-based filenames
+- **CDN Cache Control**: `Cache-Control: public, max-age=31536000, immutable` for hashed assets
+
+#### 2. **API Response Caching**
+- **ETag Headers**: Generate hash of response content for conditional requests
+- **If-None-Match**: Clients send ETag, server returns `304 Not Modified` if unchanged
+- **Cache-Control**: `max-age=60, stale-while-revalidate=3600` for dynamic content
+
+#### 3. **Academic Resource Caching**
+```sql
+-- Add hash column to resources table for cache invalidation
+ALTER TABLE academic.resources ADD COLUMN content_hash VARCHAR(64);
+CREATE INDEX idx_resources_hash ON academic.resources(content_hash);
+```
+- **File Hash**: SHA-256 hash of file content stored in database
+- **Conditional Fetch**: Clients send `If-None-Match: <hash>` header
+- **Partial Updates**: Only download resources when hash changes
+
+#### 4. **Calendar Data Caching**
+- **ICS Hash**: Store hash of external calendar content in `calendar.subscriptions`
+- **Background Sync**: Worker compares hashes, only updates if changed
+- **Feed Versioning**: Calendar feeds include `Last-Modified` and `ETag` headers
+- **Conditional Requests**: `If-Modified-Since` and `If-None-Match` headers for external calendars
+
+#### 5. **Browser Cache Strategy**
+- **Service Worker**: Cache academic resources for offline access
+- **IndexedDB**: Store user preferences and frequently accessed data
+- **Cache API**: Pre-cache critical assets during installation
+- **Stale-While-Revalidate**: Background updates while serving cached content
+
+### Cache Implementation Details
+
+#### Go Backend Cache Headers
+```go
+// Example Go middleware for cache headers
+func CacheMiddleware(next http.Handler) http.Handler {
+    return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+        // For static resources with hash
+        if strings.Contains(r.URL.Path, "?hash=") {
+            w.Header().Set("Cache-Control", "public, max-age=31536000, immutable")
+        }
+        // For API responses
+        w.Header().Set("Cache-Control", "public, max-age=60, stale-while-revalidate=3600")
+        w.Header().Set("Vary", "Accept-Encoding")
+        next.ServeHTTP(w, r)
+    })
+}
+```
+
+#### SvelteKit Static Generation
+```javascript
+// svelte.config.js - Hash-based filenames
+export default {
+    kit: {
+        adapter: adapterStatic(),
+        files: {
+            assets: 'static',
+        },
+        // Content hash for cache busting
+        vite: {
+            build: {
+                rollupOptions: {
+                    output: {
+                        entryFileNames: `[name]-[hash].js`,
+                        chunkFileNames: `[name]-[hash].js`,
+                        assetFileNames: `[name]-[hash].[ext]`
+                    }
+                }
+            }
+        }
+    }
+};
+```
+
+#### Conditional Fetch Implementation
+```javascript
+// Frontend utility for conditional resource fetching
+async function fetchResource(resourceId, lastHash) {
+    const headers = {};
+    if (lastHash) {
+        headers['If-None-Match'] = lastHash;
+    }
+    
+    const response = await fetch(`/api/resources/${resourceId}`, { headers });
+    
+    if (response.status === 304) {
+        // Resource unchanged, use cached version
+        return { cached: true, hash: lastHash };
+    }
+    
+    const hash = response.headers.get('ETag');
+    const data = await response.json();
+    
+    return { cached: false, data, hash };
+}
+```
+
+#### Calendar Sync Worker Logic
+```go
+// Go worker for calendar sync with hash comparison
+func syncCalendar(subscription calendar.Subscription) error {
+    // Send conditional request
+    req, _ := http.NewRequest("GET", subscription.ExternalURL, nil)
+    if subscription.LastContentHash != "" {
+        req.Header.Set("If-None-Match", subscription.LastContentHash)
+    }
+    if subscription.LastModifiedHeader != "" {
+        req.Header.Set("If-Modified-Since", subscription.LastModifiedHeader)
+    }
+    
+    resp, err := http.DefaultClient.Do(req)
+    if err != nil {
+        return err
+    }
+    defer resp.Body.Close()
+    
+    // If unchanged (304), skip processing
+    if resp.StatusCode == http.StatusNotModified {
+        log.Printf("Calendar unchanged: %s", subscription.Name)
+        return nil
+    }
+    
+    // Calculate new hash
+    body, _ := io.ReadAll(resp.Body)
+    newHash := sha256.Sum256(body)
+    
+    // Only update if hash changed
+    if hex.EncodeToString(newHash[:]) != subscription.LastContentHash {
+        // Parse and update calendar events
+        // Store new hash and headers
+    }
+    
+    return nil
+}
+```
+
 ### Calendar Integration
 - **Calendar system**: iCal/ICS standard compatible
 - **Sync features**: Background worker polling external .ics URLs (see `calendar.subscriptions` table)
@@ -223,7 +364,11 @@ The application follows a **Jamstack** (JavaScript, APIs, Markup) approach:
 - **CI/CD**: GitHub Actions with separate workflows for frontend/backend
 - **Monitoring**: Prometheus + Grafana for backend, Sentry for error tracking
 - **Logging**: Structured JSON logging with correlation IDs
-- **Caching**: Redis for session storage and API response caching
+- **Caching**: Multi-layer caching strategy:
+  - **Redis**: Session storage, API response cache, rate limiting
+  - **CDN**: Static assets with content hash URLs
+  - **Browser**: Service Worker + Cache API for offline resources
+  - **Database**: Materialized views for frequently queried data
 
 ## Deployment Strategy
 
