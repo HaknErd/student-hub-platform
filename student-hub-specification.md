@@ -15,14 +15,14 @@ A prefect-run student hub website based on survey responses from 44 students acr
 
 #### 1.1 Subject-Specific Resources
 - **Subjects requested**: Maths (27), Sciences (26), English (14), Geography (11), Foreign Languages (10), History (9), Business/Economics (8), Psychology (3), Computer Science (2), Art (1)
-- **Resource types**: TBD (e.g., study guides, topic summaries, revision materials)
+- **Resource types**: `study_guide`, `notes`, `past_paper`, `mark_scheme`, and `external_link`
 - **Curriculum levels**: IGCSE/IB specific resources mentioned
 
 #### 1.2 Past Papers
 **Priority: HIGH** - Second most requested feature
 - Access to past exam papers
 - Organized by subject and year
-- TBD: Solution banks/model answers (mentioned in comments)
+- Solution banks/model answers are allowed only for school-created or explicitly licensed materials
 
 #### 1.3 Study Tips & Guides
 - General study techniques
@@ -44,15 +44,15 @@ A prefect-run student hub website based on survey responses from 44 students acr
 - Term dates and holidays
 - Academic calendar
 - Event scheduling
-- **Calendar sync via URL subscription**: TBD (implementation details needed)
-- **iCal export/import**: TBD
+- **Calendar sync via URL subscription**: Included in P3 with user-managed `.ics` subscriptions refreshed every 6 hours
+- **iCal export/import**: Launch includes tokenized read-only `.ics` export only; arbitrary file import is out of scope
 
 #### 2.3 Student Timetable
 **Priority: MEDIUM** - Mentioned in comments
 - Online timetable access
 - Class schedules
 - Room assignments
-- TBD: Integration with existing school systems
+- Existing school-system timetable integration is out of launch scope
 
 ### 3. Student Community Features
 
@@ -66,13 +66,13 @@ A prefect-run student hub website based on survey responses from 44 students acr
 - Anonymous feedback mechanism
 - Suggestion box
 - Issue reporting
-- TBD: Moderation system
+- Moderation uses a shared prefect queue with teacher/admin escalation for safeguarding issues
 
 #### 3.3 Mental Health Resources
 - Mental health topics and resources
 - Support information
 - Anonymous communication center (mentioned in comments)
-- TBD: Counseling resources integration
+- Launch uses curated static support links; counseling-system integrations stay out of scope
 
 ### 4. User Profiles & Personalization
 
@@ -80,13 +80,13 @@ A prefect-run student hub website based on survey responses from 44 students acr
 - Year group based content filtering
 - Subject preferences
 - Saved resources
-- TBD: Achievement tracking
+- Achievement tracking stays out of launch scope
 
 #### 4.2 Academic Tracking
 - Access to previous reports (mentioned)
 - Conduct and housepoints visibility
 - Progress tracking
-- TBD: Integration with school grading systems
+- Grade/report integrations stay out of launch scope until school approval exists
 
 ### 5. Information Delivery Preferences
 Based on survey responses about how students prefer information:
@@ -102,7 +102,7 @@ Based on survey responses about how students prefer information:
 - **Framework**: SvelteKit with TypeScript
 - **Styling**: Tailwind CSS for utility-first styling
 - **Build System**: Vite for fast development and production builds
-- **Hosting**: Static hosting (Vercel, Netlify, or Cloudflare Pages)
+- **Hosting**: Cloudflare Pages for static frontend hosting
 - **Responsive design**: Mobile-first, desktop compatible
 - **Accessibility**: WCAG 2.1 AA compliance
 - **Performance**: Lighthouse score >90, optimized for school network speeds
@@ -111,17 +111,17 @@ Based on survey responses about how students prefer information:
 - **Language**: Go (Golang)
 - **Framework**: Standard library with minimal dependencies (chi router, sqlx for DB)
 - **API**: RESTful JSON API with OpenAPI/Swagger documentation
-- **Authentication**: JWT-based with school email validation (@sgsc-students.com)
+- **Authentication**: Custom email/password auth for `@sgsc-students.com` with JWT access tokens and rotating refresh-token cookies
 - **Database**: PostgreSQL 15+ with the schema defined in `backend/database/schema.sql`
-- **File storage**: S3-compatible storage (MinIO for self-hosted, AWS S3 for cloud)
-- **Background jobs**: Worker pool for calendar sync, email notifications, report processing
+- **File storage**: Private S3-compatible object storage (Cloudflare R2 in production, MinIO locally)
+- **Background jobs**: Postgres-backed worker pool for calendar sync, email notifications, and report processing
 
 ### Static Hosting Architecture
 The application follows a **Jamstack** (JavaScript, APIs, Markup) approach:
 1. **Frontend**: Statically generated SvelteKit app hosted on CDN
-2. **Backend**: Go API server (can be serverless functions or traditional server)
+2. **Backend**: Go API server on Fly.io
 3. **Database**: PostgreSQL with connection pooling
-4. **File Storage**: S3-compatible object storage
+4. **File Storage**: Private S3-compatible object storage
 5. **Calendar Sync**: Background worker fetching external .ics files
 
 **Benefits of static hosting:**
@@ -132,159 +132,25 @@ The application follows a **Jamstack** (JavaScript, APIs, Markup) approach:
 - **Reliability**: No server maintenance during school holidays
 
 ### Caching Strategy
-The system implements multiple layers of caching with content hashing for efficient updates:
+Caching is an optimization, not a launch dependency.
 
-#### 1. **Frontend Asset Caching**
-- **Content Hash URLs**: `main.js?hash=abc123` → Cache forever, bust on change
-- **SvelteKit Adapter**: Static generation with hash-based filenames
-- **CDN Cache Control**: `Cache-Control: public, max-age=31536000, immutable` for hashed assets
-
-#### 2. **API Response Caching**
-- **ETag Headers**: Generate hash of response content for conditional requests
-- **If-None-Match**: Clients send ETag, server returns `304 Not Modified` if unchanged
-- **Cache-Control**: `max-age=60, stale-while-revalidate=3600` for dynamic content
-
-#### 3. **Academic Resource Caching**
-```sql
--- Add hash column to resources table for cache invalidation
-ALTER TABLE academic.resources ADD COLUMN content_hash VARCHAR(64);
-CREATE INDEX idx_resources_hash ON academic.resources(content_hash);
-```
-- **File Hash**: SHA-256 hash of file content stored in database
-- **Conditional Fetch**: Clients send `If-None-Match: <hash>` header
-- **Partial Updates**: Only download resources when hash changes
-
-#### 4. **Calendar Data Caching**
-- **ICS Hash**: Store hash of external calendar content in `calendar.subscriptions`
-- **Background Sync**: Worker compares hashes, only updates if changed
-- **Feed Versioning**: Calendar feeds include `Last-Modified` and `ETag` headers
-- **Conditional Requests**: `If-Modified-Since` and `If-None-Match` headers for external calendars
-
-#### 5. **Browser Cache Strategy**
-- **Service Worker**: Cache academic resources for offline access
-- **IndexedDB**: Store user preferences and frequently accessed data
-- **Cache API**: Pre-cache critical assets during installation
-- **Stale-While-Revalidate**: Background updates while serving cached content
-
-### Cache Implementation Details
-
-#### Go Backend Cache Headers
-```go
-// Example Go middleware for cache headers
-func CacheMiddleware(next http.Handler) http.Handler {
-    return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-        // For static resources with hash
-        if strings.Contains(r.URL.Path, "?hash=") {
-            w.Header().Set("Cache-Control", "public, max-age=31536000, immutable")
-        }
-        // For API responses
-        w.Header().Set("Cache-Control", "public, max-age=60, stale-while-revalidate=3600")
-        w.Header().Set("Vary", "Accept-Encoding")
-        next.ServeHTTP(w, r)
-    })
-}
-```
-
-#### SvelteKit Static Generation
-```javascript
-// svelte.config.js - Hash-based filenames
-export default {
-    kit: {
-        adapter: adapterStatic(),
-        files: {
-            assets: 'static',
-        },
-        // Content hash for cache busting
-        vite: {
-            build: {
-                rollupOptions: {
-                    output: {
-                        entryFileNames: `[name]-[hash].js`,
-                        chunkFileNames: `[name]-[hash].js`,
-                        assetFileNames: `[name]-[hash].[ext]`
-                    }
-                }
-            }
-        }
-    }
-};
-```
-
-#### Conditional Fetch Implementation
-```javascript
-// Frontend utility for conditional resource fetching
-async function fetchResource(resourceId, lastHash) {
-    const headers = {};
-    if (lastHash) {
-        headers['If-None-Match'] = lastHash;
-    }
-    
-    const response = await fetch(`/api/resources/${resourceId}`, { headers });
-    
-    if (response.status === 304) {
-        // Resource unchanged, use cached version
-        return { cached: true, hash: lastHash };
-    }
-    
-    const hash = response.headers.get('ETag');
-    const data = await response.json();
-    
-    return { cached: false, data, hash };
-}
-```
-
-#### Calendar Sync Worker Logic
-```go
-// Go worker for calendar sync with hash comparison
-func syncCalendar(subscription calendar.Subscription) error {
-    // Send conditional request
-    req, _ := http.NewRequest("GET", subscription.ExternalURL, nil)
-    if subscription.LastContentHash != "" {
-        req.Header.Set("If-None-Match", subscription.LastContentHash)
-    }
-    if subscription.LastModifiedHeader != "" {
-        req.Header.Set("If-Modified-Since", subscription.LastModifiedHeader)
-    }
-    
-    resp, err := http.DefaultClient.Do(req)
-    if err != nil {
-        return err
-    }
-    defer resp.Body.Close()
-    
-    // If unchanged (304), skip processing
-    if resp.StatusCode == http.StatusNotModified {
-        log.Printf("Calendar unchanged: %s", subscription.Name)
-        return nil
-    }
-    
-    // Calculate new hash
-    body, _ := io.ReadAll(resp.Body)
-    newHash := sha256.Sum256(body)
-    
-    // Only update if hash changed
-    if hex.EncodeToString(newHash[:]) != subscription.LastContentHash {
-        // Parse and update calendar events
-        // Store new hash and headers
-    }
-    
-    return nil
-}
-```
+- Static assets should use hashed filenames and long-lived CDN caching.
+- Read-heavy API responses can use ETag or Last-Modified headers.
+- Uploaded resources need a clear invalidation path when content changes.
+- Calendar sync should compare hashes or headers before rewriting events.
+- Offline caching should wait until the core app is stable.
 
 ### Calendar Integration
-- **Calendar system**: iCal/ICS standard compatible
-- **Sync features**: Background worker polling external .ics URLs (see `calendar.subscriptions` table)
-- **Export options**: iCal feed generation, Google Calendar/Outlook integration
-- **Event management**: CRUD operations with audit logging
-- **Implementation**: Go library `github.com/arran4/golang-ical` for iCal parsing/generation
+- iCal/ICS compatible event sync.
+- Background worker polling external `.ics` URLs.
+- Tokenized export to iCal feeds and external calendar apps in P3.
+- CRUD operations with audit logging.
 
 ### Content Management
-- **Admin panel**: Svelte-based dashboard for prefects
-- **Moderation system**: Queue for reports, feedback, and resource verification
-- **Version control**: Git-like tracking for academic resource updates
-- **Search functionality**: PostgreSQL full-text search with ranking
-- **Real-time updates**: WebSocket connections for admin notifications
+- Svelte admin dashboard for prefects.
+- Moderation queue for reports, feedback, and resource verification.
+- Search across resources, events, and student content.
+- Real-time updates only if they solve a real workflow problem.
 
 ## Security & Privacy
 
@@ -302,42 +168,14 @@ func syncCalendar(subscription calendar.Subscription) error {
 - Audit logging for all administrative actions
 - Rate limiting and DDoS protection
 
-## Implementation Phases
+## Implementation Roadmap
 
-### Phase 1: Foundation & MVP (4-6 weeks)
-1. **Go Backend Setup**: Project structure, database migrations, basic API
-2. **Svelte Frontend**: Basic layout, authentication UI, Tailwind setup
-3. **Authentication**: School email validation, JWT tokens, role management
-4. **Subject Resources**: Basic CRUD for Maths, Sciences, English resources
-5. **Static Deployment**: CDN setup, CI/CD pipeline
+See `docs/implementation-roadmap.md` for the priority order.
 
-### Phase 2: Core Academic Features (4-6 weeks)
-1. **Past Papers Repository**: File upload/download, organization by subject/year
-2. **School Calendar**: Event management, iCal feed generation
-3. **User Profiles**: Year-group filtering, saved resources
-4. **Search Functionality**: Full-text search across resources
-5. **Admin Dashboard**: Basic content moderation interface
-
-### Phase 3: Community & Communication (4-6 weeks)
-1. **Student Articles**: Blog platform with Markdown support
-2. **Feedback System**: Anonymous feedback collection and management
-3. **Calendar Sync**: Background worker for external .ics URL subscriptions
-4. **Study Tips Section**: Curated content from teachers/senior students
-5. **Report System**: Anonymous issue reporting with categorization
-
-### Phase 4: Advanced Features (4-8 weeks)
-1. **Mental Health Resources**: Curated content, anonymous support channels
-2. **Academic Tracking**: Progress monitoring, conduct records visibility
-3. **Real-time Features**: WebSocket notifications, live updates
-4. **Mobile Optimization**: PWA capabilities, offline functionality
-5. **School Integration**: Timetable sync, gradebook connections (if APIs available)
-
-### Phase 5: Scale & Polish (Ongoing)
-1. **Performance Optimization**: Caching strategies, CDN optimization
-2. **Accessibility Audit**: WCAG 2.1 AA compliance verification
-3. **Monitoring & Analytics**: Usage tracking, performance monitoring
-4. **Community Features**: Peer tutoring, study groups, forums
-5. **Internationalization**: Multi-language support if needed
+1. Contract freeze: lock auth, access, moderation, resource taxonomy, and deployment defaults.
+2. Platform foundation: auth, roles, app shell, shared reference data, and upload presign flow.
+3. MVP delivery: resources, moderation, calendar CRUD, and community workflows in parallel slices.
+4. Hardening: search expansion, personalization, accessibility, observability, and calendar sync.
 
 ## Development Setup & Tooling
 
@@ -360,20 +198,16 @@ func syncCalendar(subscription calendar.Subscription) error {
 - **State management**: Svelte stores (no external libraries needed)
 
 ### Infrastructure
-- **Container Orchestration**: Docker Compose for development, Kubernetes optional
+- **Container Orchestration**: Docker Compose for development; no Kubernetes in the launch plan
 - **CI/CD**: GitHub Actions with separate workflows for frontend/backend
-- **Monitoring**: Prometheus + Grafana for backend, Sentry for error tracking
+- **Monitoring**: Sentry for frontend/backend errors, with metrics added in P3
 - **Logging**: Structured JSON logging with correlation IDs
-- **Caching**: Multi-layer caching strategy:
-  - **Redis**: Session storage, API response cache, rate limiting
-  - **CDN**: Static assets with content hash URLs
-  - **Browser**: Service Worker + Cache API for offline resources
-  - **Database**: Materialized views for frequently queried data
+- **Caching**: CDN and HTTP caching first; browser caching and service worker support only after the core app is stable
 
 ## Deployment Strategy
 
 ### Development Environment
-- Local Docker Compose with PostgreSQL, MinIO, Redis
+- Local Docker Compose with PostgreSQL and MinIO
 - Hot reload for both Go and Svelte development
 - Seed data for testing all features
 
@@ -383,34 +217,42 @@ func syncCalendar(subscription calendar.Subscription) error {
 - Performance and security scanning
 
 ### Production Environment
-- **Frontend**: Vercel/Netlify/Cloudflare Pages (static hosting)
-- **Backend**: Fly.io/Railway/Heroku (Go API server)
-- **Database**: Managed PostgreSQL (Supabase, Neon, AWS RDS)
-- **File Storage**: S3-compatible (AWS S3, Cloudflare R2, MinIO)
+- **Frontend**: Cloudflare Pages (static hosting)
+- **Backend**: Fly.io (Go API server)
+- **Database**: Neon PostgreSQL
+- **File Storage**: Cloudflare R2
 - **Domain**: Custom domain with HTTPS (Let's Encrypt)
 
-## Unknown Areas & TBD Items
+## Launch Decision Log
 
-### Technical Decisions Needed
-1. **Authentication Provider**: School SSO integration vs custom email validation
-2. **File Storage Location**: Cloud vs self-hosted (cost vs control trade-off)
-3. **Calendar Sync Frequency**: How often to poll external .ics URLs
-4. **Email Service**: For notifications and password resets
-5. **Backup Strategy**: Automated backups and disaster recovery plan
+### Auth, access, and identity
+1. **Authentication provider**: Custom email/password auth with `@sgsc-students.com`; school SSO is out of launch scope.
+2. **Session model**: 15-minute JWT access token plus a rotating 14-day refresh token in an `HttpOnly`, `Secure` cookie.
+3. **Role assignment**: New accounts default to `student`; `prefect`, `teacher`, and `admin` roles are assigned by admin seed data or invite-only flows.
+4. **Content visibility**: All student-hub content requires authentication except health checks and the API schema.
+5. **Anonymous submissions**: Feedback and reports require login but can be anonymous to prefect moderators; only admins can reveal identity during safeguarding escalation.
+6. **Parental consent**: No separate parental-consent UI ships in launch; access is gated by school-issued accounts and staff oversight.
 
-### Content & Policy Decisions
-1. **Resource Licensing**: Clear guidelines for past papers and copyrighted materials
-2. **Moderation Workflow**: Escalation path for serious reports (bullying, safety)
-3. **Data Retention**: How long to keep user data, logs, and uploaded files
-4. **Acceptable Use Policy**: Rules for student-generated content
-5. **Parental Consent**: Requirements for younger students (Year 8-9)
+### Content and moderation
+1. **Resource licensing**: Uploads are limited to school-created, student-created, or explicitly licensed materials. Copyrighted past papers without redistribution rights must be linked externally, not re-hosted.
+2. **Resource workflow**: `pending_review` -> `verified` or `rejected`; deletion is always a soft delete.
+3. **Article workflow**: `draft` -> `submitted` -> `published` -> `archived`, with prefect/admin publication control.
+4. **Report workflow**: `submitted` -> `triaged` -> `escalated` -> `resolved` -> `closed`, with teacher/admin escalation for safeguarding issues.
+5. **Acceptable use**: Student-generated content must be attributable to a school account, stay within school conduct rules, and is fully auditable in moderator actions.
+6. **Retention policy**: Audit logs keep 180 days, feedback keeps 365 days, reports keep 24 months, and deleted upload objects purge after 30 days unless a safeguarding hold exists.
 
-### Administrative Decisions
-1. **Prefect Training Program**: Documentation and hands-on workshops
-2. **Support Rotation**: Which prefects handle reports/moderation each week
-3. **Escalation Contacts**: Teachers/administrators for serious issues
-4. **Maintenance Windows**: Scheduled downtime during school holidays
-5. **Budget Allocation**: Hosting costs, domain, third-party services
+### Calendar and async work
+1. **Calendar scope**: Event CRUD is MVP; external subscriptions and `.ics` export land in P3.
+2. **Sync frequency**: External `.ics` subscriptions refresh every 6 hours; manual sync is limited to once every 15 minutes.
+3. **Feed access**: Generated `.ics` feeds use per-user unguessable tokens instead of browser sessions.
+4. **Non-launch integrations**: Timetable, conduct, grade/report, and counseling-system integrations stay outside launch scope.
+
+### Infrastructure and operations
+1. **Hosting model**: Managed cloud deployment with Cloudflare Pages, Fly.io, Neon PostgreSQL, and Cloudflare R2.
+2. **Email service**: Resend handles transactional mail and escalation notifications.
+3. **Backup strategy**: Managed daily database backups with 30-day retention plus object-storage versioning.
+4. **Support model**: Prefects operate a weekly moderation rota; teacher advisors are the escalation contacts for safeguarding and policy issues.
+5. **Maintenance windows**: Planned maintenance happens during school holidays or announced low-traffic windows.
 
 ## Success Metrics & Analytics
 
@@ -469,4 +311,4 @@ func syncCalendar(subscription calendar.Subscription) error {
 
 ---
 
-*This specification is based on survey responses from 44 SGSC students. All TBD items should be clarified with stakeholders before implementation.*
+*This specification is based on survey responses from 44 SGSC students. Launch-blocking product and technical choices are now locked so frontend and backend can execute in parallel.*
