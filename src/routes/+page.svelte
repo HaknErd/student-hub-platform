@@ -20,18 +20,18 @@
 	<h2>To be added</h2>
 	<ul class="status-list" aria-label="Features">
 		<li class="is-done">Accounts</li>
-		<li>Search</li>
+		<li class="is-done">Search</li>
 		<li class="is-done">Academic resources</li>
-		<li>Subject resources</li>
+		<li class="is-done">Subject resources kinda done</li>
 		<li class="is-done">Past paper links</li>
-		<li>Study tips</li>
-		<li>School events</li>
-		<li>School calendar</li>
-		<li>Student timetable</li>
-		<li>Student articles</li>
+		<li class="">Study tips</li>
+		<li class="">School events</li>
+		<li class="">School calendar</li>
+		<li class="">Student timetable</li>
+		<li class="">Student articles</li>
 		<li class="is-done">Feedback system</li>
-		<li>Mental health resources</li>
-		<li>Student profiles</li>
-		<li>Academic tracking</li>
+		<li class="">Mental health resources</li>
+		<li class="is-done">Student profiles</li>
+		<li class="">Academic tracking</li>
 	</ul>
 </section>
