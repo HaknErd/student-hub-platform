@@ -27,20 +27,11 @@
 </script>
 
 <a class="resource-card" href={`/resources/${resource.id}`}>
-	<div class="resource-card-meta">
+	<div class="resource-card-tags">
 		<span>{resource.subject}</span>
-		{#if resource.yearGroup}
-			<span>Year {resource.yearGroup}</span>
-		{/if}
-		{#if resource.curriculum}
-			<span>{resource.curriculum}</span>
-		{/if}
-		{#if resource.level}
-			<span>{resource.level}</span>
-		{/if}
-		{#if resource.format}
-			<span>{resource.format.toUpperCase()}</span>
-		{/if}
+		{#if resource.curriculum}<span>{resource.curriculum}</span>{/if}
+		{#if resource.level}<span>{resource.level}</span>{/if}
+		{#if resource.format}<span>{resource.format.toUpperCase()}</span>{/if}
 		<span>{humanize(resource.type)}</span>
 	</div>
 
@@ -48,20 +39,7 @@
 	<p>{resource.description || 'No description provided.'}</p>
 
 	<div class="resource-card-footer">
-		{#if showStatus}
-			<span
-				class:status-pending={resource.status === 'pending_review'}
-				class:status-verified={resource.status === 'verified'}
-				class:status-rejected={resource.status === 'rejected'}
-			>
-				{humanize(resource.status)}
-			</span>
-		{:else}
-			<span></span>
-		{/if}
-
-		{#if showAuthor}
-			<span>By {resource.createdBy.displayName}</span>
-		{/if}
+		<span class="resource-card-status">{showStatus ? humanize(resource.status) : 'Open resource'}</span>
+		{#if showAuthor}<span class="resource-card-author">By {resource.createdBy.displayName}</span>{/if}
 	</div>
 </a>

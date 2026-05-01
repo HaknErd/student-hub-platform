@@ -5,7 +5,6 @@
 	import Avatar from '$lib/components/Avatar.svelte';
 	import AvatarEditorModal from '$lib/components/AvatarEditorModal.svelte';
 	import BannerEditorModal from '$lib/components/BannerEditorModal.svelte';
-	import InlineEditableField from '$lib/components/InlineEditableField.svelte';
 	import ResourceCard from '$lib/components/resources/ResourceCard.svelte';
 
 	let { data } = $props();
@@ -17,9 +16,9 @@
 
 	let showAvatarModal = $state(false);
 	let showBannerModal = $state(false);
-	let isEditingProfile = $state(false);
+	let showCustomizeModal = $state(false);
+	let editingBio = $state(false);
 
-	const canOpenProfileEditor = $derived(data.isOwnProfile || data.canManageRole);
 	let bioValue = $state('');
 	let customAccentColor = $state('#2563eb');
 	let customAvatarColor = $state('#2563eb');
@@ -183,41 +182,25 @@
 	};
 </script>
 
-<div class="profile-layout">
-	{#if data.isOwnProfile}
-		<button
-			type="button"
-			class="profile-banner-wrap editable-banner"
-			onclick={() => (showBannerModal = true)}
-			aria-label="Edit banner image"
-		>
-			{#if bannerImageUrl}
-				<img class="profile-banner-img" src={bannerImageUrl} alt="" />
-			{:else}
-				<div
-					class="profile-banner"
-					style="background-color: {data.profile.accentColor || 'var(--color-border)'}"
-				></div>
-			{/if}
-
-			<span class="profile-banner-overlay">Edit banner</span>
-		</button>
-	{:else}
-		<div class="profile-banner-wrap" aria-label="Profile banner">
-			{#if bannerImageUrl}
-				<img class="profile-banner-img" src={bannerImageUrl} alt="" />
-			{:else}
-				<div
-					class="profile-banner"
-					style="background-color: {data.profile.accentColor || 'var(--color-border)'}"
-				></div>
-			{/if}
-		</div>
-	{/if}
-
-	<div class="profile-container">
-		<div class="profile-top-row">
-			<div class="profile-avatar-wrapper">
+<section class="mx-auto max-w-5xl overflow-hidden rounded-2xl border border-border bg-surface">
+	<button
+		type="button"
+		class="relative block h-40 w-full overflow-hidden border-b border-border"
+		onclick={data.isOwnProfile ? () => (showBannerModal = true) : undefined}
+		aria-label={data.isOwnProfile ? 'Edit banner image' : 'Profile banner'}
+	>
+		{#if bannerImageUrl}
+			<img class="h-full w-full object-cover" src={bannerImageUrl} alt="" />
+		{:else}
+			<div class="h-full w-full" style="background-color: {data.profile.accentColor || 'var(--color-border)'}"></div>
+		{/if}
+		{#if data.isOwnProfile}
+			<span class="absolute right-3 top-3 rounded-md border border-white/20 bg-black/50 px-2 py-1 text-xs text-white">Edit banner</span>
+		{/if}
+	</button>
+	<div class="p-4 sm:p-6">
+		<div class="mb-4 flex items-end justify-between gap-3 border-b border-border pb-4">
+			<div class="-mt-16 rounded-2xl border-4 border-surface bg-surface">
 				<Avatar
 					userId={data.profile.id}
 					firstName={data.profile.firstName}
@@ -231,239 +214,118 @@
 					onclickavatar={data.isOwnProfile ? () => (showAvatarModal = true) : undefined}
 				/>
 			</div>
-
-			{#if canOpenProfileEditor}
-				<div class="profile-actions-wrapper">
-<button
-						type="button"
-						class="btn-ghost"
-						onclick={() => (isEditingProfile = !isEditingProfile)}
-					>
-						{isEditingProfile ? 'Done' : 'Edit profile'}
-					</button>
-					<a href="/account" class="btn-ghost icon-btn" aria-label="Settings">
-						<span aria-hidden="true">⚙</span>
-					</a>
+			{#if data.isOwnProfile}
+				<div class="flex gap-2">
+					<button class="btn-ghost h-9 px-3" type="button" onclick={() => (showCustomizeModal = true)}>Customize profile</button>
+					<a class="btn-ghost h-9 px-3" href="/account">Settings</a>
 				</div>
 			{/if}
 		</div>
-
-		{#if isEditingProfile}
-			<div class="profile-edit-grid">
-				{#if data.isOwnProfile}
-					<div class="profile-edit-section">
-						<h2 class="profile-edit-heading">Personal Details</h2>
-
-						<div class="field-list-new">
-							<InlineEditableField label="First name" value={data.profile.firstName} field="firstName" action="?/updateField" />
-							<InlineEditableField label="Last name" value={data.profile.lastName} field="lastName" action="?/updateField" />
-
-							{#if data.canEditEmail}
-								<InlineEditableField label="Email" value={data.ownEmail || ''} field="email" action="?/updateField" type="email" />
-							{:else}
-								<div class="inline-edit-row" style="cursor: default">
-									<span class="inline-edit-label">Email</span>
-									<span class="inline-edit-value">{data.ownEmail || ''}</span>
-								</div>
-							{/if}
-
-							<div class="inline-edit-row" style="cursor: default">
-								<span class="inline-edit-label">Role</span>
-								<span class="inline-edit-value">{data.profile.role}</span>
-							</div>
-						</div>
-
-						<div class="bio-edit-group">
-							<label for="bio-input" class="inline-edit-label block mb-1">Description</label>
-							<form method="POST" action="?/updateSettings" use:enhance={handleBioSubmit}>
-								<textarea
-									id="bio-input"
-									name="bio"
-									rows="3"
-									class="profile-bio-textarea"
-									placeholder="Add a short profile description..."
-									bind:value={bioValue}
-								></textarea>
-
-								<div class="flex justify-end mt-2">
-									<button type="submit" class="btn btn-sm">Save description</button>
-								</div>
-							</form>
-						</div>
+		<div class="space-y-3">
+			<h1 class="text-2xl font-semibold text-text">{data.profile.displayName}</h1>
+			<p class="text-sm uppercase tracking-wide text-text-muted">{data.profile.role}</p>
+			{#if editingBio && data.isOwnProfile}
+				<form method="POST" action="?/updateSettings" use:enhance={handleBioSubmit} class="max-w-2xl space-y-2">
+					<textarea name="bio" rows="3" class="w-full rounded-md border border-border bg-bg px-3 py-2 text-sm text-text" bind:value={bioValue}></textarea>
+					<div class="flex gap-2">
+						<button type="submit" class="btn mt-0 h-9 px-3">Save</button>
+						<button type="button" class="btn-ghost h-9 px-3" onclick={() => (editingBio = false)}>Cancel</button>
 					</div>
-
-					<div class="profile-edit-section">
-						<h2 class="profile-edit-heading">Profile Customization</h2>
-
-						{#if mediaError}
-							<p class="form-error">{mediaError}</p>
-						{/if}
-
-						<div class="profile-media-actions">
-							<button type="button" class="btn-ghost" onclick={() => (showAvatarModal = true)}>
-								Edit profile picture
-							</button>
-						</div>
-
-						<div>
-							<p class="inline-edit-label mb-2">Avatar shape</p>
-							<div class="profile-hero-shape-toggle">
-								<button
-									type="button"
-									class="profile-shape-btn"
-									class:active={data.profile.avatarShape === 'rounded-xl'}
-									onclick={() => handleAvatarShapeChange('rounded-xl')}
-									aria-label="Rounded square avatar"
-								>
-									■
-								</button>
-								<button
-									type="button"
-									class="profile-shape-btn"
-									class:active={data.profile.avatarShape === 'rounded-full'}
-									onclick={() => handleAvatarShapeChange('rounded-full')}
-									aria-label="Circle avatar"
-								>
-									●
-								</button>
-							</div>
-						</div>
-
-						<div class="color-section">
-							<div class="color-field">
-								<p class="inline-edit-label mb-2">Accent color</p>
-								<form method="POST" action="?/updateColor" use:enhance={handleColorSubmit} class="color-picker-form">
-									<input type="hidden" name="colorField" value="accentColor" />
-									{#each PRESET_COLORS as color}
-										<button
-											type="submit"
-											name="value"
-											value={color}
-											class="color-swatch color-swatch-md"
-											class:active={data.profile.accentColor === color}
-											style="background-color: {color}"
-											aria-label="Accent color {color}"
-										></button>
-									{/each}
-									<label
-										class="custom-color-control"
-										style="background-color: {customAccentColor}"
-										aria-label="Custom accent color"
-									>
-										<input
-											type="color"
-											name="value"
-											bind:value={customAccentColor}
-											onchange={(event) => (event.currentTarget as HTMLInputElement).form?.requestSubmit()}
-										/>
-									</label>
-								</form>
-							</div>
-
-							<div class="color-field">
-								<p class="inline-edit-label mb-2">Avatar background</p>
-								<form method="POST" action="?/updateColor" use:enhance={handleColorSubmit} class="color-picker-form">
-									<input type="hidden" name="colorField" value="avatarBackgroundColor" />
-									{#each PRESET_COLORS as color}
-										<button
-											type="submit"
-											name="value"
-											value={color}
-											class="color-swatch color-swatch-md"
-											class:active={data.profile.avatarBackgroundColor === color}
-											style="background-color: {color}"
-											aria-label="Avatar color {color}"
-										></button>
-									{/each}
-									<label
-										class="custom-color-control"
-										style="background-color: {customAvatarColor}"
-										aria-label="Custom avatar background"
-									>
-										<input
-											type="color"
-											name="value"
-											bind:value={customAvatarColor}
-											onchange={(event) => (event.currentTarget as HTMLInputElement).form?.requestSubmit()}
-										/>
-									</label>
-								</form>
-							</div>
-						</div>
-					</div>
-				{:else if data.canManageRole}
-					<div class="profile-edit-section admin-role-panel">
-						<h2 class="profile-edit-heading">Admin Controls</h2>
-
-						<div class="field-list-new">
-							<div class="inline-edit-row" style="cursor: default">
-								<span class="inline-edit-label">User</span>
-								<span class="inline-edit-value">{data.profile.displayName}</span>
-							</div>
-
-							<div class="inline-edit-row role-edit-row" style="cursor: default">
-								<div>
-									<span class="inline-edit-label">Role</span>
-									<span class="role-edit-help">Changing this dropdown saves automatically.</span>
-								</div>
-
-								<div class="role-edit-control">
-									<select aria-label="User role" onchange={handleRoleChange} disabled={roleSaving}>
-										{#each data.roleOptions as role}
-											<option value={role} selected={data.profile.role === role}>{role}</option>
-										{/each}
-									</select>
-
-									{#if roleSaving}
-										<span class="settings-status-muted">Saving...</span>
-									{/if}
-								</div>
-
-								{#if roleError}
-									<span class="inline-edit-error">{roleError}</span>
-								{/if}
-							</div>
-						</div>
-					</div>
-				{/if}
+				</form>
+			{:else if data.profile.settings?.bio}
+				<button type="button" class="text-left text-sm text-text hover:text-primary" onclick={data.isOwnProfile ? () => (editingBio = true) : undefined}>
+					{data.profile.settings.bio}
+				</button>
+			{:else if data.isOwnProfile}
+				<button type="button" class="text-sm text-text-muted hover:text-primary" onclick={() => (editingBio = true)}>Add a profile description</button>
+			{/if}
+		</div>
+		<section class="mt-6 space-y-3 border-t border-border pt-5">
+			<div class="flex items-center gap-2">
+				<h2 class="text-base font-semibold text-text">Submitted resources</h2>
+				<span class="rounded-md border border-border bg-bg px-2 py-0.5 text-xs text-text-muted">{data.submittedResources.length}</span>
 			</div>
-		{:else}
-			<div class="profile-info">
-				<h1 class="profile-name">{data.profile.displayName}</h1>
-				<p class="profile-role">{data.profile.role}</p>
-
-				{#if data.profile.settings?.bio}
-					<div class="profile-bio-text">
-						{data.profile.settings.bio}
-					</div>
-				{:else if data.isOwnProfile}
-					<div class="profile-bio-empty">
-						No description yet. <button type="button" class="text-primary hover:underline" onclick={() => (isEditingProfile = true)}>Add one</button>
-					</div>
-				{/if}
-			</div>
-
-			<section class="profile-resources-section">
-				<div class="search-group-header">
-					<h2>Submitted resources</h2>
-					<span>{data.submittedResources.length}</span>
+			{#if data.submittedResources.length === 0}
+				<p class="rounded-lg border border-border bg-bg/50 px-4 py-3 text-sm text-text-muted">{data.isOwnProfile ? 'You have not submitted any resources yet.' : 'No submitted resources yet.'}</p>
+			{:else}
+				<div class="grid gap-3 md:grid-cols-2">
+					{#each data.submittedResources as resource}
+						<ResourceCard {resource} showAuthor={false} />
+					{/each}
 				</div>
-
-				{#if data.submittedResources.length === 0}
-					<p class="search-group-empty">
-						{data.isOwnProfile ? 'You have not submitted any resources yet.' : 'No submitted resources yet.'}
-					</p>
-				{:else}
-					<div class="resource-grid">
-						{#each data.submittedResources as resource}
-							<ResourceCard {resource} showAuthor={false} />
-						{/each}
+			{/if}
+		</section>
+		{#if data.canManageRole && !data.isOwnProfile}
+			<section class="mt-6 rounded-xl border border-border bg-bg p-4">
+				<h2 class="text-sm font-semibold text-text">Admin controls</h2>
+				<div class="mt-3 flex items-center justify-between gap-3">
+					<span class="text-sm text-text-muted">Role</span>
+					<div class="flex items-center gap-2">
+						<select class="h-9 rounded-md border border-border bg-surface px-3 text-sm text-text" aria-label="User role" onchange={handleRoleChange} disabled={roleSaving}>
+							{#each data.roleOptions as role}
+								<option value={role} selected={data.profile.role === role}>{role}</option>
+							{/each}
+						</select>
+						{#if roleSaving}<span class="text-xs text-text-muted">Saving...</span>{/if}
 					</div>
-				{/if}
+				</div>
+				{#if roleError}<p class="mt-2 text-xs text-red-500">{roleError}</p>{/if}
 			</section>
 		{/if}
 	</div>
-</div>
+</section>
+
+{#if showCustomizeModal}
+	<div class="fixed inset-0 z-40 flex items-center justify-center bg-black/60 p-4">
+		<div class="w-full max-w-2xl rounded-xl border border-border bg-surface p-5">
+			<div class="mb-4 flex items-center justify-between">
+				<h2 class="text-base font-semibold text-text">Customize profile</h2>
+				<button type="button" class="btn-ghost h-9 px-3" onclick={() => (showCustomizeModal = false)}>Done</button>
+			</div>
+			{#if mediaError}
+				<p class="form-error">{mediaError}</p>
+			{/if}
+			<div class="grid gap-4 md:grid-cols-2">
+				<div class="space-y-2">
+					<p class="text-xs font-semibold uppercase tracking-wide text-text-muted">Avatar shape</p>
+					<div class="flex gap-2">
+						<button type="button" class="btn-ghost h-9 px-3" onclick={() => handleAvatarShapeChange('rounded-xl')}>Rounded square</button>
+						<button type="button" class="btn-ghost h-9 px-3" onclick={() => handleAvatarShapeChange('rounded-full')}>Circle</button>
+					</div>
+				</div>
+				<div class="space-y-2">
+					<p class="text-xs font-semibold uppercase tracking-wide text-text-muted">Photos</p>
+					<div class="flex gap-2">
+						<button type="button" class="btn-ghost h-9 px-3" onclick={() => (showAvatarModal = true)}>Edit avatar</button>
+						<button type="button" class="btn-ghost h-9 px-3" onclick={() => (showBannerModal = true)}>Edit banner</button>
+					</div>
+				</div>
+			</div>
+			<div class="mt-4 grid gap-4 md:grid-cols-2">
+				<form method="POST" action="?/updateColor" use:enhance={handleColorSubmit} class="space-y-2">
+					<input type="hidden" name="colorField" value="accentColor" />
+					<p class="text-xs font-semibold uppercase tracking-wide text-text-muted">Accent color</p>
+					<div class="flex flex-wrap gap-2">
+						{#each PRESET_COLORS as color}
+							<button type="submit" name="value" value={color} class="h-7 w-7 rounded-md border border-border" style="background-color: {color}" aria-label="Accent color {color}"></button>
+						{/each}
+						<input type="color" name="value" class="h-7 w-7 rounded-md border border-border bg-bg p-0" bind:value={customAccentColor} onchange={(event) => (event.currentTarget as HTMLInputElement).form?.requestSubmit()} />
+					</div>
+				</form>
+				<form method="POST" action="?/updateColor" use:enhance={handleColorSubmit} class="space-y-2">
+					<input type="hidden" name="colorField" value="avatarBackgroundColor" />
+					<p class="text-xs font-semibold uppercase tracking-wide text-text-muted">Avatar background</p>
+					<div class="flex flex-wrap gap-2">
+						{#each PRESET_COLORS as color}
+							<button type="submit" name="value" value={color} class="h-7 w-7 rounded-md border border-border" style="background-color: {color}" aria-label="Avatar color {color}"></button>
+						{/each}
+						<input type="color" name="value" class="h-7 w-7 rounded-md border border-border bg-bg p-0" bind:value={customAvatarColor} onchange={(event) => (event.currentTarget as HTMLInputElement).form?.requestSubmit()} />
+					</div>
+				</form>
+			</div>
+		</div>
+	</div>
+{/if}
 
 {#if showAvatarModal}
 	<AvatarEditorModal

@@ -1,5 +1,9 @@
 <script lang="ts">
 	import ResourceCard from '$lib/components/resources/ResourceCard.svelte';
+	import Card from '$lib/components/ui/Card.svelte';
+	import EmptyState from '$lib/components/ui/EmptyState.svelte';
+	import PageHeader from '$lib/components/ui/PageHeader.svelte';
+	import PageShell from '$lib/components/ui/PageShell.svelte';
 
 	let { data } = $props();
 
@@ -79,89 +83,93 @@
 	];
 </script>
 
-<section class="resources-page search-page">
-	<header class="resources-top">
-		<div>
-			<p class="settings-eyebrow">Resources</p>
-			<h1>Academic resources</h1>
-			<p>Verified notes, guides, links, and student-submitted resources.</p>
-		</div>
+<PageShell wide={true}>
+	<PageHeader title="Academic resources" description="Verified notes, guides, and student-submitted resources.">
+		{#snippet actions()}
+			<a class="btn mt-0" href="/resources/new">Submit resource</a>
+		{/snippet}
+	</PageHeader>
 
-		<a class="btn" href="/resources/new">Submit resource</a>
-	</header>
+	<Card>
+		<form id="resource-search-form" method="GET" action="/resources" class="space-y-3">
+			<div class="flex flex-col gap-3 sm:flex-row">
+				<input
+					type="search"
+					name="q"
+					value={data.query}
+					placeholder="Search resources..."
+					class="h-10 w-full rounded-md border border-border bg-bg px-3 text-sm text-text outline-none transition focus-visible:border-primary focus-visible:ring-2 focus-visible:ring-primary/25"
+				/>
+				<button class="btn mt-0 shrink-0" type="submit">Search</button>
+			</div>
 
-	<aside class="search-filter-rail" aria-label="Resource filters">
-		<div class="rail-card">
-			<h2>Filters</h2>
+			<div class="grid gap-3 md:grid-cols-2">
+				<label class="grid gap-1 text-sm text-text-muted">
+					<span>Subject</span>
+					<select class="h-10 rounded-md border border-border bg-bg px-3 text-sm text-text" name="subject">
+						{#each subjects as [value, label]}
+							<option value={value} selected={data.subject === value}>{label}</option>
+						{/each}
+					</select>
+				</label>
 
-			<label>
-				<span>Subject</span>
-				<select name="subject" form="resource-search-form" onchange={(event) => event.currentTarget.form?.requestSubmit()}>
-					{#each subjects as [value, label]}
-						<option value={value} selected={data.subject === value}>{label}</option>
-					{/each}
-				</select>
-			</label>
+				<label class="grid gap-1 text-sm text-text-muted">
+					<span>Course</span>
+					<select class="h-10 rounded-md border border-border bg-bg px-3 text-sm text-text" name="curriculum">
+						{#each courses as [value, label]}
+							<option value={value} selected={data.curriculum === value}>{label}</option>
+						{/each}
+					</select>
+				</label>
+			</div>
 
-			<label>
-				<span>Course</span>
-				<select name="curriculum" form="resource-search-form" onchange={(event) => event.currentTarget.form?.requestSubmit()}>
-					{#each courses as [value, label]}
-						<option value={value} selected={data.curriculum === value}>{label}</option>
-					{/each}
-				</select>
-			</label>
-
-			<label>
-				<span>Level</span>
-				<select name="level" form="resource-search-form" onchange={(event) => event.currentTarget.form?.requestSubmit()}>
-					{#each levels as [value, label]}
-						<option value={value} selected={data.level === value}>{label}</option>
-					{/each}
-				</select>
-			</label>
-
-			<label>
-				<span>Purpose</span>
-				<select name="type" form="resource-search-form" onchange={(event) => event.currentTarget.form?.requestSubmit()}>
-					{#each resourceTypes as [value, label]}
-						<option value={value} selected={data.type === value}>{label}</option>
-					{/each}
-				</select>
-			</label>
-
-			<label>
-				<span>Format group</span>
-				<select name="formatGroup" form="resource-search-form" onchange={(event) => event.currentTarget.form?.requestSubmit()}>
-					{#each formatGroups as [value, label]}
-						<option value={value} selected={data.formatGroup === value}>{label}</option>
-					{/each}
-				</select>
-			</label>
-
-			<label>
-				<span>Exact format</span>
-				<select name="format" form="resource-search-form" onchange={(event) => event.currentTarget.form?.requestSubmit()}>
-					{#each formats as [value, label]}
-						<option value={value} selected={data.format === value}>{label}</option>
-					{/each}
-				</select>
-			</label>
-		</div>
-	</aside>
-
-	<form id="resource-search-form" class="search-bar-full search-bar-main" method="GET" action="/resources">
-		<input type="search" name="q" value={data.query} placeholder="Search resources..." />
-		<button class="btn" type="submit">Search</button>
-	</form>
+			<details>
+				<summary class="cursor-pointer text-sm font-medium text-text-muted">More filters</summary>
+				<div class="mt-3 grid gap-3 md:grid-cols-2 lg:grid-cols-4">
+					<label class="grid gap-1 text-sm text-text-muted">
+						<span>Level</span>
+						<select class="h-10 rounded-md border border-border bg-bg px-3 text-sm text-text" name="level">
+							{#each levels as [value, label]}
+								<option value={value} selected={data.level === value}>{label}</option>
+							{/each}
+						</select>
+					</label>
+					<label class="grid gap-1 text-sm text-text-muted">
+						<span>Purpose</span>
+						<select class="h-10 rounded-md border border-border bg-bg px-3 text-sm text-text" name="type">
+							{#each resourceTypes as [value, label]}
+								<option value={value} selected={data.type === value}>{label}</option>
+							{/each}
+						</select>
+					</label>
+					<label class="grid gap-1 text-sm text-text-muted">
+						<span>Format group</span>
+						<select class="h-10 rounded-md border border-border bg-bg px-3 text-sm text-text" name="formatGroup">
+							{#each formatGroups as [value, label]}
+								<option value={value} selected={data.formatGroup === value}>{label}</option>
+							{/each}
+						</select>
+					</label>
+					<label class="grid gap-1 text-sm text-text-muted">
+						<span>Exact format</span>
+						<select class="h-10 rounded-md border border-border bg-bg px-3 text-sm text-text" name="format">
+							{#each formats as [value, label]}
+								<option value={value} selected={data.format === value}>{label}</option>
+							{/each}
+						</select>
+					</label>
+				</div>
+			</details>
+		</form>
+	</Card>
 
 	{#if data.resources.length === 0}
-		<p class="search-empty">No resources found.</p>
+		<EmptyState message="No resources found." />
 	{:else}
-		<div class="resource-grid">
+		<div class="grid gap-3 md:grid-cols-2">
 			{#each data.resources as resource}
 				<ResourceCard {resource} />
 			{/each}
 		</div>
 	{/if}
-</section>
+</PageShell>

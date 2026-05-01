@@ -3092,7 +3092,7 @@
 	font-size: 0.9rem;
 }
 
-.resource-card-meta {
+.resource-card-tags {
 	display: flex;
 	flex-wrap: wrap;
 	gap: 0.4rem;
@@ -3103,7 +3103,7 @@
 	color: var(--color-text-muted);
 }
 
-.resource-card-meta span {
+.resource-card-tags span {
 	border-radius: 9999px;
 	border: 1px solid var(--color-border);
 	background: var(--color-bg);
@@ -3114,8 +3114,18 @@
 	display: flex;
 	flex-wrap: wrap;
 	justify-content: space-between;
+	align-items: center;
 	gap: 0.75rem;
 	font-size: 0.8rem;
+	color: var(--color-text-muted);
+}
+
+.resource-card-status {
+	font-weight: 600;
+	color: var(--color-text);
+}
+
+.resource-card-author {
 	color: var(--color-text-muted);
 }
 

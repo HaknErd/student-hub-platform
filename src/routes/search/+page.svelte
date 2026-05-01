@@ -1,6 +1,12 @@
 <script lang="ts">
-	import Avatar from '$lib/components/Avatar.svelte';
 	import ResourceCard from '$lib/components/resources/ResourceCard.svelte';
+	import Card from '$lib/components/ui/Card.svelte';
+	import EmptyState from '$lib/components/ui/EmptyState.svelte';
+	import PageHeader from '$lib/components/ui/PageHeader.svelte';
+	import PageShell from '$lib/components/ui/PageShell.svelte';
+	import ResultCard from '$lib/components/ui/ResultCard.svelte';
+	import SearchBar from '$lib/components/ui/SearchBar.svelte';
+	import SectionHeader from '$lib/components/ui/SectionHeader.svelte';
 
 	let { data } = $props();
 
@@ -20,106 +26,61 @@
 	}
 </script>
 
-<section class="stack-page search-page">
-	<header class="page-header search-page-header">
-		<div class="search-page-title">
-			<h1>
-				{#if hasQuery}
-					Results for &ldquo;{data.query}&rdquo;
-				{:else}
-					Search
-				{/if}
-			</h1>
+<PageShell wide={true}>
+	<PageHeader
+		title={hasQuery ? `Results for "${data.query}"` : 'Search'}
+		description={hasQuery
+			? `Found ${data.total} ${data.total === 1 ? 'result' : 'results'} in ${data.tookMs} ms`
+			: 'Find students and resources.'}
+	/>
 
-			{#if hasQuery}
-				<p class="search-meta">
-					Found {data.total} {data.total === 1 ? 'result' : 'results'} in {data.tookMs} ms
-				</p>
-			{/if}
-		</div>
-	</header>
-
-	<aside class="search-filter-rail" aria-label="Search filters">
-		<div class="rail-card">
-			<h2>Filters</h2>
-
-			<label>
-				<span>Type</span>
-				<select name="type" form="search-form" aria-label="Search type">
-					<option value="any" selected={data.type === 'any'}>Any</option>
-					<option value="users" selected={data.type === 'users'}>Users</option>
-					<option value="content" selected={data.type === 'content'}>Content</option>
-				</select>
-			</label>
-		</div>
-	</aside>
-
-	<form id="search-form" class="search-bar-full search-bar-main" method="GET" action="/search">
-		<input
-			type="search"
-			name="q"
-			placeholder="Search users and content..."
-			value={data.query}
-			autocomplete="off"
-		/>
-
-		<button type="submit" class="btn">Search</button>
-	</form>
+	<Card>
+		<SearchBar id="search-form" action="/search" query={data.query} placeholder="Search users and content...">
+			<select
+				name="type"
+				aria-label="Search type"
+				class="h-10 rounded-md border border-border bg-bg px-3 text-sm text-text focus-visible:border-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/25"
+			>
+				<option value="any" selected={data.type === 'any'}>Any</option>
+				<option value="users" selected={data.type === 'users'}>Users</option>
+				<option value="content" selected={data.type === 'content'}>Content</option>
+			</select>
+		</SearchBar>
+	</Card>
 
 	{#if hasQuery && data.total === 0}
-		<p class="search-empty">No results found for &ldquo;{data.query}&rdquo;.</p>
+		<EmptyState message={`No results found for "${data.query}".`} />
 	{/if}
 
 	{#if hasQuery && data.total > 0}
-		<div class="search-groups">
+		<div class="space-y-4">
 			{#if showUsers}
-				<section class="search-group">
-					<header class="search-group-header">
-						<h2>Users</h2>
-						<span>{data.usersTotal}</span>
-					</header>
+				<Card>
+					<SectionHeader title="Users" count={data.usersTotal} />
 
 					{#if data.users.length > 0}
-						<ul class="search-results">
+						<ul class="grid gap-2">
 							{#each data.users as user}
-								<li>
-									<a href={`/profile/${user.id}`} class="search-result-item">
-										<Avatar
-											userId={user.id}
-											firstName={user.firstName}
-											lastName={user.lastName}
-											profilePictureUrl={user.profilePictureUrl}
-											accentColor={user.accentColor}
-											avatarBackgroundColor={user.avatarBackgroundColor}
-											avatarShape={user.avatarShape}
-											size="md"
-										/>
-
-										<div class="search-result-info">
-											<span class="search-result-name">{user.displayName}</span>
-											<span class="search-result-role">{user.role}</span>
-										</div>
-									</a>
-								</li>
+								<li><ResultCard href={`/profile/${user.id}`} id={user.id} firstName={user.firstName} lastName={user.lastName} displayName={user.displayName} role={user.role} profilePictureUrl={user.profilePictureUrl} accentColor={user.accentColor} avatarBackgroundColor={user.avatarBackgroundColor} avatarShape={user.avatarShape} /></li>
 							{/each}
 						</ul>
 
 						{#if data.totalPages > 1 && (data.type === 'any' || data.type === 'users')}
-							<nav class="search-pagination" aria-label="User search pagination">
+							<nav class="mt-3 flex items-center justify-between gap-2" aria-label="User search pagination">
 								<a
-									class="btn-ghost"
+									class="btn-ghost h-9 px-3"
 									class:disabled-link={data.page <= 1}
 									href={data.page <= 1 ? undefined : pageHref(previousPage)}
 								>
 									Previous
 								</a>
 
-								<span class="search-pagination-status">
+								<span class="text-xs text-text-muted">
 									Page {data.page} of {data.totalPages}
 								</span>
 
 								<a
-									class="btn-ghost"
+									class="btn-ghost h-9 px-3"
 									class:disabled-link={data.page >= data.totalPages}
 									href={data.page >= data.totalPages ? undefined : pageHref(nextPage)}
 								>
@@ -128,41 +89,38 @@
 							</nav>
 						{/if}
 					{:else}
-						<p class="search-group-empty">No user results.</p>
+						<EmptyState message="No user results." />
 					{/if}
-				</section>
+				</Card>
 			{/if}
 
 			{#if showContent}
-				<section class="search-group">
-					<header class="search-group-header">
-						<h2>Content</h2>
-						<span>{data.contentTotal}</span>
-					</header>
+				<Card>
+					<SectionHeader title="Content" count={data.contentTotal} />
 
 					{#if data.content.length > 0}
-						<div class="resource-grid">
+						<div class="grid gap-3 md:grid-cols-2">
 							{#each data.content as resource}
 								<ResourceCard {resource} />
 							{/each}
 						</div>
 
 						{#if data.contentTotalPages > 1 && (data.type === 'any' || data.type === 'content')}
-							<nav class="search-pagination" aria-label="Content search pagination">
+							<nav class="mt-3 flex items-center justify-between gap-2" aria-label="Content search pagination">
 								<a
-									class="btn-ghost"
+									class="btn-ghost h-9 px-3"
 									class:disabled-link={data.page <= 1}
 									href={data.page <= 1 ? undefined : pageHref(previousPage)}
 								>
 									Previous
 								</a>
 
-								<span class="search-pagination-status">
+								<span class="text-xs text-text-muted">
 									Page {data.page} of {data.contentTotalPages}
 								</span>
 
 								<a
-									class="btn-ghost"
+									class="btn-ghost h-9 px-3"
 									class:disabled-link={data.page >= data.contentTotalPages}
 									href={data.page >= data.contentTotalPages ? undefined : pageHref(contentNextPage)}
 								>
@@ -171,10 +129,10 @@
 							</nav>
 						{/if}
 					{:else}
-						<p class="search-group-empty">No content results.</p>
+						<EmptyState message="No content results." />
 					{/if}
-				</section>
+				</Card>
 			{/if}
 		</div>
 	{/if}
-</section>
+</PageShell>

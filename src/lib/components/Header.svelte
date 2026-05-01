@@ -1,6 +1,7 @@
 <script lang="ts">
 	import type { User } from '$lib/auth';
-	import Avatar from '$lib/components/Avatar.svelte';
+	import UserMenu from '$lib/components/ui/UserMenu.svelte';
+	import MobileNav from '$lib/components/ui/MobileNav.svelte';
 
 	type Props = {
 		user?: User | null;
@@ -21,86 +22,42 @@
 </script>
 
 <header class="site-header">
-	<div class="site-header__inner">
-		<a class="site-brand" href="/">Student Hub</a>
-
-		<div class="site-header__right">
-			<nav class="site-nav" aria-label="Primary">
-				<a href="/">Home</a>
-				<a href="/resources">Resources</a>
-				{#if user}
-					<a href="/search">Search</a>
-					<a href="/account">Settings</a>
-				{/if}
-			</nav>
-
+	<div class="mx-auto flex h-14 w-full max-w-6xl items-center gap-3 px-4 sm:px-6">
+		<a class="site-brand shrink-0" href="/">Student Hub</a>
+		<nav class="hidden items-center gap-1 md:flex" aria-label="Primary">
+			<a class="rounded-md px-3 py-2 text-sm text-text-muted no-underline hover:bg-bg hover:text-text" href="/">Home</a>
+			<a class="rounded-md px-3 py-2 text-sm text-text-muted no-underline hover:bg-bg hover:text-text" href="/resources">Resources</a>
 			{#if user}
-				<form class="header-search" method="GET" action="/search">
-					<input
-						type="search"
-						name="q"
-						placeholder="Search..."
-						autocomplete="off"
-						aria-label="Search people and resources"
-					/>
-				</form>
-			{/if}
-
-			<button
-				type="button"
-				class="mobile-menu-toggle"
-				aria-label="Toggle navigation menu"
-				aria-expanded={mobileMenuOpen}
-				onclick={() => (mobileMenuOpen = !mobileMenuOpen)}
-			>
-				<span></span>
-				<span></span>
-				<span></span>
-			</button>
-
-			{#if user}
-				<div class="auth-chip" aria-label="Logged in as">
-					<Avatar
-						userId={user.id}
-						firstName={user.firstName}
-						lastName={user.lastName}
-						profilePictureUrl={user.profilePictureUrl}
-						accentColor={user.accentColor}
-						avatarBackgroundColor={user.avatarBackgroundColor}
-						avatarShape={user.avatarShape}
-						size="sm"
-					/>
-					<a class="auth-chip__value" href={`/profile/${user.id}`}>{user.displayName}</a>
-					<button type="button" class="auth-chip__action" onclick={logout}>Logout</button>
-				</div>
-			{:else}
-				<a class="auth-login" href="/login">Login</a>
-			{/if}
-		</div>
-	</div>
-
-	{#if mobileMenuOpen}
-		<nav class="mobile-nav" aria-label="Mobile navigation">
-			<a href="/" onclick={closeMobileMenu}>Home</a>
-			<a href="/resources" onclick={closeMobileMenu}>Resources</a>
-
-			{#if user}
-				<a href="/search" onclick={closeMobileMenu}>Search</a>
-				<a href={`/profile/${user.id}`} onclick={closeMobileMenu}>Profile</a>
-				<a href="/account" onclick={closeMobileMenu}>Settings</a>
-
-				{#if ['prefect', 'teacher', 'admin'].includes(user.role)}
-					<a href="/moderation" onclick={closeMobileMenu}>Moderation</a>
-				{/if}
-
-				{#if user.role === 'admin'}
-					<a href="/admin/server-settings" onclick={closeMobileMenu}>Server</a>
-				{/if}
-
-				<button type="button" onclick={logout}>Logout</button>
-			{:else}
-				<a href="/login" onclick={closeMobileMenu}>Login</a>
+				<a class="rounded-md px-3 py-2 text-sm text-text-muted no-underline hover:bg-bg hover:text-text" href="/search">Search</a>
 			{/if}
 		</nav>
-	{/if}
+		{#if user}
+			<form class="ml-auto hidden w-full max-w-sm md:block" method="GET" action="/search">
+				<input
+					type="search"
+					name="q"
+					placeholder="Search users or resources"
+					autocomplete="off"
+					aria-label="Global search"
+					class="h-9 w-full rounded-md border border-border bg-bg px-3 text-sm text-text outline-none transition focus-visible:border-primary focus-visible:ring-2 focus-visible:ring-primary/25"
+				/>
+			</form>
+			<div class="ml-auto hidden md:block">
+				<UserMenu {user} onLogout={logout} />
+			</div>
+		{:else}
+			<a class="ml-auto hidden rounded-md border border-border bg-bg px-3 py-1.5 text-sm text-text-muted no-underline hover:bg-surface hover:text-text md:inline-flex" href="/login">Login</a>
+		{/if}
+		<button
+			type="button"
+			class="ml-auto inline-flex h-9 w-9 items-center justify-center rounded-md border border-border bg-bg text-text md:hidden"
+			aria-label="Toggle navigation menu"
+			aria-expanded={mobileMenuOpen}
+			onclick={() => (mobileMenuOpen = !mobileMenuOpen)}
+		>
+			☰
+		</button>
+	</div>
+
+	<MobileNav {user} open={mobileMenuOpen} onClose={closeMobileMenu} onLogout={logout} />
 </header>
