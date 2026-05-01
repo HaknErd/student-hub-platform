@@ -3895,3 +3895,133 @@
 		min-width: 0;
 	}
 }
+
+
+/* ---- Settings/security layout fix ---- */
+.settings-section {
+	width: 100%;
+}
+
+.settings-security-form,
+.settings-form-grid {
+	width: 100%;
+	max-width: none !important;
+}
+
+.settings-form-grid {
+	grid-template-columns: minmax(0, 1fr);
+}
+
+.settings-form-grid input[type='password'] {
+	max-width: 42rem;
+}
+
+.settings-danger-note {
+	max-width: 42rem;
+}
+
+/* ---- Clean mobile navigation ---- */
+.mobile-menu-toggle {
+	display: none;
+	width: 2.25rem;
+	height: 2.25rem;
+	border: 1px solid var(--color-border);
+	border-radius: 0.5rem;
+	background: var(--color-bg);
+	align-items: center;
+	justify-content: center;
+	gap: 0.22rem;
+	flex-direction: column;
+}
+
+.mobile-menu-toggle span {
+	display: block;
+	width: 1rem;
+	height: 2px;
+	border-radius: 9999px;
+	background: var(--color-text);
+}
+
+.mobile-nav {
+	display: none;
+	border-top: 1px solid var(--color-border);
+	background: var(--color-surface);
+	padding: 0.5rem;
+}
+
+.mobile-nav a,
+.mobile-nav button {
+	display: flex;
+	width: 100%;
+	align-items: center;
+	justify-content: space-between;
+	border-radius: 0.6rem;
+	padding: 0.8rem 1rem;
+	text-align: left;
+	text-decoration: none;
+	font-size: 0.95rem;
+	font-weight: 700;
+	color: var(--color-text);
+}
+
+.mobile-nav a:hover,
+.mobile-nav button:hover {
+	background: var(--color-bg);
+	color: var(--color-primary);
+}
+
+.mobile-nav button {
+	border: 0;
+	background: transparent;
+	cursor: pointer;
+}
+
+@media (max-width: 760px) {
+	.site-header__inner {
+		height: 3.75rem;
+	}
+
+	.site-header__right {
+		gap: 0.5rem;
+	}
+
+	.site-nav,
+	.header-search {
+		display: none !important;
+	}
+
+	.mobile-menu-toggle {
+		display: inline-flex;
+	}
+
+	.mobile-nav {
+		display: grid;
+	}
+
+	.auth-chip {
+		max-width: none;
+		padding: 0.25rem;
+		border: 0;
+		background: transparent;
+	}
+
+	.auth-chip__value,
+	.auth-chip__action {
+		display: none;
+	}
+}
+
+@media (max-width: 480px) {
+	.site-header__inner {
+		padding-inline: 1rem;
+	}
+
+	.site-brand {
+		font-size: 0.95rem;
+	}
+
+	.auth-login {
+		height: 2.25rem;
+		padding-inline: 0.75rem;
+	}
+}

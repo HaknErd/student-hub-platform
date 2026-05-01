@@ -8,6 +8,12 @@
 
 	let { user = null }: Props = $props();
 
+	let mobileMenuOpen = $state(false);
+
+	function closeMobileMenu() {
+		mobileMenuOpen = false;
+	}
+
 	async function logout() {
 		const res = await fetch('/api/auth/logout', { method: 'POST' });
 		if (res.ok) location.href = '/';
@@ -23,6 +29,7 @@
 				<a href="/">Home</a>
 				<a href="/resources">Resources</a>
 				{#if user}
+					<a href="/search">Search</a>
 					<a href="/account">Settings</a>
 				{/if}
 			</nav>
@@ -38,6 +45,18 @@
 					/>
 				</form>
 			{/if}
+
+			<button
+				type="button"
+				class="mobile-menu-toggle"
+				aria-label="Toggle navigation menu"
+				aria-expanded={mobileMenuOpen}
+				onclick={() => (mobileMenuOpen = !mobileMenuOpen)}
+			>
+				<span></span>
+				<span></span>
+				<span></span>
+			</button>
 
 			{#if user}
 				<div class="auth-chip" aria-label="Logged in as">
@@ -59,4 +78,29 @@
 			{/if}
 		</div>
 	</div>
+
+	{#if mobileMenuOpen}
+		<nav class="mobile-nav" aria-label="Mobile navigation">
+			<a href="/" onclick={closeMobileMenu}>Home</a>
+			<a href="/resources" onclick={closeMobileMenu}>Resources</a>
+
+			{#if user}
+				<a href="/search" onclick={closeMobileMenu}>Search</a>
+				<a href={`/profile/${user.id}`} onclick={closeMobileMenu}>Profile</a>
+				<a href="/account" onclick={closeMobileMenu}>Settings</a>
+
+				{#if ['prefect', 'teacher', 'admin'].includes(user.role)}
+					<a href="/moderation" onclick={closeMobileMenu}>Moderation</a>
+				{/if}
+
+				{#if user.role === 'admin'}
+					<a href="/admin/server-settings" onclick={closeMobileMenu}>Server</a>
+				{/if}
+
+				<button type="button" onclick={logout}>Logout</button>
+			{:else}
+				<a href="/login" onclick={closeMobileMenu}>Login</a>
+			{/if}
+		</nav>
+	{/if}
 </header>
