@@ -95,6 +95,7 @@ function mapUser(row: Record<string, unknown>): User {
 		profilePictureUrl: row.profile_picture_url ? String(row.profile_picture_url) : null,
 		profilePictureHash: row.profile_picture_hash ? String(row.profile_picture_hash) : null,
 		bannerPictureUrl: row.banner_picture_url ? String(row.banner_picture_url) : null,
+		bannerPictureHash: row.banner_picture_hash ? String(row.banner_picture_hash) : null,
 		accentColor: row.accent_color ? String(row.accent_color) : null,
 		avatarBackgroundColor: row.avatar_background_color ? String(row.avatar_background_color) : null,
 		avatarShape: resolveAvatarShape(settings),

@@ -6,8 +6,17 @@
    Design Tokens
 ------------------------------ */
 @theme {
-	--color-primary: #2563eb;
-	--color-primary-hover: #1d4ed8;
+	--color-accent: #ff9fb5;
+	--color-accent-hover: #F49AC2;
+	--color-accent-contrast: #111111;
+	--color-primary: var(--color-accent);
+	--color-primary-hover: var(--color-accent-hover);
+
+	--radius-sm: 0.125rem;
+	--radius-md: 0.1875rem;
+	--radius-lg: 0.25rem;
+	--radius-xl: 0.375rem;
+	--radius-2xl: 0.5rem;
 
 	--color-text: #0f172a;
 	--color-text-muted: #475569;
@@ -23,8 +32,8 @@
 
 @media (prefers-color-scheme: dark) {
 	@theme {
-		--color-primary: #60a5fa;
-		--color-primary-hover: #3b82f6;
+		--color-primary: var(--color-accent);
+		--color-primary-hover: var(--color-accent-hover);
 
 		--color-text: #e2e8f0;
 		--color-text-muted: #94a3b8;
@@ -75,7 +84,7 @@
 	}
 
 	.app-content {
-		@apply py-10;
+		@apply py-4 sm:py-8;
 	}
 
 	/* ---- Header ---- */
@@ -1100,6 +1109,119 @@
 	@apply text-danger;
 }
 
+/* ---- Unified profile page primitives ---- */
+.profile-page-card {
+	@apply w-full overflow-hidden rounded-2xl border border-border bg-surface;
+}
+
+.profile-banner-trigger {
+	@apply relative block h-40 w-full overflow-hidden border-b border-border;
+}
+
+.profile-banner-image {
+	@apply h-full w-full object-cover;
+}
+
+.profile-banner-edit-chip {
+	@apply absolute right-3 top-3 rounded-md border border-white/20 bg-black/50 px-2 py-1 text-xs text-white;
+}
+
+.profile-page-content {
+	@apply p-4 sm:p-6;
+}
+
+.profile-header-row {
+	@apply mb-4 flex items-end justify-between gap-3 border-b border-border pb-4;
+}
+
+.profile-avatar-frame {
+	@apply -mt-16 rounded-2xl border-4 border-surface bg-surface;
+}
+
+.profile-owner-actions {
+	@apply flex gap-2;
+}
+
+.profile-body {
+	@apply space-y-3;
+}
+
+.profile-display-name {
+	@apply text-2xl font-semibold text-text;
+}
+
+.profile-role-text {
+	@apply text-sm uppercase tracking-wide text-text-muted;
+}
+
+.profile-bio-form {
+	@apply max-w-2xl space-y-2;
+}
+
+.profile-bio-input {
+	@apply w-full rounded-md border border-border bg-bg px-3 py-2 text-sm text-text;
+}
+
+.profile-inline-actions {
+	@apply flex items-center gap-2;
+}
+
+.profile-bio-display {
+	@apply text-left text-sm text-text hover:text-primary;
+}
+
+.profile-bio-empty {
+	@apply text-sm text-text-muted hover:text-primary;
+}
+
+.profile-resources {
+	@apply mt-6 space-y-3 border-t border-border pt-5;
+}
+
+.profile-section-header {
+	@apply flex items-center gap-2;
+}
+
+.profile-section-header h2 {
+	@apply text-base font-semibold text-text;
+}
+
+.profile-section-header span {
+	@apply rounded-md border border-border bg-bg px-2 py-0.5 text-xs text-text-muted;
+}
+
+.profile-empty-note {
+	@apply rounded-lg border border-border bg-bg/50 px-4 py-3 text-sm text-text-muted;
+}
+
+.profile-resource-grid {
+	@apply grid gap-3 md:grid-cols-2;
+}
+
+.profile-admin-panel {
+	@apply mt-6 rounded-xl border border-border bg-bg p-4;
+}
+
+.profile-admin-panel h2 {
+	@apply text-sm font-semibold text-text;
+}
+
+.profile-admin-row {
+	@apply mt-3 flex items-center justify-between gap-3 text-sm text-text-muted;
+}
+
+.profile-admin-select {
+	@apply h-9 rounded-md border border-border bg-surface px-3 text-sm text-text;
+}
+
+.profile-muted-xs {
+	@apply text-xs text-text-muted;
+}
+
+.profile-error-xs {
+	@apply mt-2 text-xs text-red-500;
+}
+
 /* Remove hover layout jitter from old modal/menu rules if still present */
 .avatar-modal-menu-btn:hover {
 	margin: 0 !important;
@@ -1341,7 +1463,7 @@
 	flex: 0 0 auto;
 	display: inline-block;
 	border: 4px solid var(--color-surface);
-	border-radius: 1rem;
+	border-radius: var(--radius-2xl);
 	background: var(--color-surface);
 	box-shadow: 0 10px 25px rgb(0 0 0 / 18%);
 }
@@ -1427,7 +1549,7 @@
 	max-width: 56rem;
 	margin-inline: auto;
 	overflow: hidden;
-	border-radius: 1rem;
+	border-radius: var(--radius-2xl);
 }
 
 .profile-banner-wrap {
@@ -1507,7 +1629,7 @@
 	flex: 0 0 auto;
 	display: inline-block;
 	border: 4px solid var(--color-surface);
-	border-radius: 1rem;
+	border-radius: var(--radius-2xl);
 	background: var(--color-surface);
 	box-shadow: 0 10px 25px rgb(0 0 0 / 18%);
 }
@@ -1680,7 +1802,7 @@
 
 	display: inline-block;
 	border: 4px solid var(--color-surface);
-	border-radius: 1rem;
+	border-radius: var(--radius-2xl);
 	background: var(--color-surface);
 	box-shadow: 0 10px 25px rgb(0 0 0 / 18%);
 }
@@ -1791,7 +1913,7 @@
 }
 
 .profile-avatar-wrapper:has(.rounded-xl) {
-	border-radius: 1rem !important;
+	border-radius: var(--radius-2xl) !important;
 }
 
 /* The edit overlay must match avatar shape too */
@@ -1802,7 +1924,7 @@
 
 .avatar-editable.rounded-xl,
 .avatar-editable.rounded-xl .avatar-overlay {
-	border-radius: 1rem !important;
+	border-radius: var(--radius-2xl) !important;
 }
 
 /* ---- Color picker: same height as swatches, pipette/dropper style overlay ---- */
@@ -1813,7 +1935,7 @@
 .color-swatch-md {
 	width: 2.5rem !important;
 	height: 2.5rem !important;
-	border-radius: 0.55rem;
+	border-radius: var(--radius-lg);
 }
 
 .custom-color-control {
@@ -1824,7 +1946,7 @@
 	width: 2.5rem !important;
 	height: 2.5rem !important;
 	padding: 0 !important;
-	border-radius: 0.55rem;
+	border-radius: var(--radius-lg);
 	border: 2px solid var(--color-border);
 	background: var(--color-surface);
 	overflow: hidden;
@@ -1898,7 +2020,7 @@
 .auth-chip .avatar.rounded-xl,
 .search-result-item .avatar.rounded-xl,
 .profile-avatar-wrapper .avatar.rounded-xl {
-	border-radius: 0.75rem !important;
+	border-radius: var(--radius-xl) !important;
 }
 
 /* ---- Proper compact custom colour picker ---- */
@@ -1915,7 +2037,7 @@
 	height: 2.75rem !important;
 	min-width: 2.75rem !important;
 	min-height: 2.75rem !important;
-	border-radius: 0.75rem !important;
+	border-radius: var(--radius-xl) !important;
 	box-sizing: border-box;
 }
 
@@ -2009,7 +2131,7 @@
 .search-bar-with-filter select {
 	width: 100%;
 	height: 2.5rem;
-	border-radius: 0.375rem;
+	border-radius: var(--radius-md);
 	border: 1px solid var(--color-border);
 	background: var(--color-bg);
 	padding-inline: 0.75rem;
@@ -2095,7 +2217,7 @@
 
 .search-group-empty {
 	border: 1px solid var(--color-border);
-	border-radius: 0.75rem;
+	border-radius: var(--radius-xl);
 	background: var(--color-surface);
 	padding: 1rem;
 	font-size: 0.875rem;
@@ -2165,7 +2287,7 @@
 	display: grid;
 	gap: 0.25rem;
 	border: 1px solid var(--color-border);
-	border-radius: 0.75rem;
+	border-radius: var(--radius-xl);
 	background: var(--color-surface);
 	padding: 0.5rem;
 }
@@ -2173,7 +2295,7 @@
 .settings-sidebar-link {
 	display: flex;
 	align-items: center;
-	border-radius: 0.5rem;
+	border-radius: var(--radius-lg);
 	padding: 0.65rem 0.75rem;
 	text-decoration: none;
 	font-size: 0.875rem;
@@ -2203,7 +2325,7 @@
 
 .settings-section {
 	border: 1px solid var(--color-border);
-	border-radius: 0.875rem;
+	border-radius: var(--radius-xl);
 	background: var(--color-surface);
 	overflow: hidden;
 }
@@ -2266,7 +2388,7 @@
 .settings-control select {
 	width: 14rem;
 	height: 2.4rem;
-	border-radius: 0.5rem;
+	border-radius: var(--radius-lg);
 	border: 1px solid var(--color-border);
 	background: var(--color-bg);
 	padding-inline: 0.75rem;
@@ -2311,7 +2433,7 @@
 .settings-switch input {
 	width: 1rem;
 	height: 1rem;
-	border-radius: 0.25rem;
+	border-radius: var(--radius-sm);
 	border-color: var(--color-border);
 	color: var(--color-primary);
 }
@@ -2340,7 +2462,7 @@
 .settings-form-grid input[type='password'] {
 	width: 100%;
 	height: 2.5rem;
-	border-radius: 0.5rem;
+	border-radius: var(--radius-lg);
 	border: 1px solid var(--color-border);
 	background: var(--color-bg);
 	padding-inline: 0.75rem;
@@ -2355,7 +2477,7 @@
 
 .settings-danger-note {
 	border: 1px solid var(--color-danger-border);
-	border-radius: 0.65rem;
+	border-radius: var(--radius-lg);
 	background: var(--color-danger-surface);
 	padding: 0.75rem;
 	color: var(--color-danger) !important;
@@ -2378,7 +2500,7 @@
 .settings-table-wrap {
 	overflow-x: auto;
 	border: 1px solid var(--color-border);
-	border-radius: 0.875rem;
+	border-radius: var(--radius-xl);
 	background: var(--color-surface);
 }
 
@@ -2567,7 +2689,7 @@
 	display: grid;
 	gap: 1rem;
 	border: 1px solid var(--color-border);
-	border-radius: 0.875rem;
+	border-radius: var(--radius-xl);
 	background: var(--color-surface);
 	padding: 1rem;
 }
@@ -2594,7 +2716,7 @@
 .rail-card select {
 	height: 2.4rem;
 	width: 100%;
-	border-radius: 0.5rem;
+	border-radius: var(--radius-lg);
 	border: 1px solid var(--color-border);
 	background: var(--color-bg);
 	padding-inline: 0.75rem;
@@ -2606,7 +2728,7 @@
 .rail-card input {
 	height: 2.4rem;
 	width: 100%;
-	border-radius: 0.5rem;
+	border-radius: var(--radius-lg);
 	border: 1px solid var(--color-border);
 	background: var(--color-bg);
 	padding-inline: 0.75rem;
@@ -2650,7 +2772,7 @@
 	display: grid;
 	gap: 0.25rem;
 	border: 1px solid var(--color-border);
-	border-radius: 0.875rem;
+	border-radius: var(--radius-xl);
 	background: var(--color-surface);
 	padding: 0.5rem;
 }
@@ -2715,8 +2837,8 @@
 /* ---- Explicit theme mode overrides: settings select now actually controls theme ---- */
 @layer base {
 	html[data-theme='light'] {
-		--color-primary: #2563eb;
-		--color-primary-hover: #1d4ed8;
+		--color-primary: var(--color-accent);
+		--color-primary-hover: var(--color-accent-hover);
 
 		--color-text: #0f172a;
 		--color-text-muted: #475569;
@@ -2732,8 +2854,8 @@
 	}
 
 	html[data-theme='dark'] {
-		--color-primary: #60a5fa;
-		--color-primary-hover: #3b82f6;
+		--color-primary: var(--color-accent);
+		--color-primary-hover: var(--color-accent-hover);
 
 		--color-text: #e2e8f0;
 		--color-text-muted: #94a3b8;
@@ -2823,7 +2945,7 @@
 	width: 2.25rem;
 	height: 2.25rem;
 	border: 1px solid var(--color-border);
-	border-radius: 0.55rem;
+	border-radius: var(--radius-lg);
 	background: var(--color-bg);
 	color: var(--color-text-muted);
 	cursor: pointer;
@@ -2848,7 +2970,7 @@
 }
 
 .shape-sample.square {
-	border-radius: 0.2rem;
+	border-radius: var(--radius-sm);
 }
 
 .shape-sample.circle {
@@ -2888,12 +3010,12 @@
 }
 
 .image-editor-crop-area.avatar-crop.shape-rounded {
-	border-radius: 1rem !important;
+	border-radius: var(--radius-2xl) !important;
 	overflow: hidden;
 }
 
 .image-editor-crop-area.banner-crop {
-	border-radius: 1rem !important;
+	border-radius: var(--radius-2xl) !important;
 	overflow: hidden;
 }
 
@@ -2902,7 +3024,7 @@
 }
 
 .image-editor-crop-area.avatar-crop.shape-rounded canvas {
-	border-radius: 1rem !important;
+	border-radius: var(--radius-2xl) !important;
 }
 
 .image-editor-crop-area.avatar-crop.shape-circle::after,
@@ -2950,7 +3072,7 @@
 }
 
 .shape-sample.square {
-	border-radius: 0.25rem;
+	border-radius: var(--radius-sm);
 }
 
 .shape-sample.circle {
@@ -3041,7 +3163,7 @@
 .moderation-reject input,
 .moderation-inline select {
 	width: 100%;
-	border-radius: 0.5rem;
+	border-radius: var(--radius-lg);
 	border: 1px solid var(--color-border);
 	background: var(--color-bg);
 	padding: 0.65rem 0.75rem;
@@ -3069,7 +3191,7 @@
 	display: grid;
 	gap: 0.5rem;
 	border: 1px solid var(--color-border);
-	border-radius: 0.875rem;
+	border-radius: var(--radius-xl);
 	background: var(--color-surface);
 	padding: 1rem;
 	text-decoration: none;
@@ -3152,7 +3274,7 @@
 	gap: 1rem;
 	max-width: 48rem;
 	border: 1px solid var(--color-border);
-	border-radius: 1rem;
+	border-radius: var(--radius-2xl);
 	background: var(--color-surface);
 	padding: 1.25rem;
 }
@@ -3192,7 +3314,7 @@
 .resource-detail-footer,
 .resource-edit-card {
 	border: 1px solid var(--color-border);
-	border-radius: 1rem;
+	border-radius: var(--radius-2xl);
 	background: var(--color-surface);
 	padding: 1.25rem;
 }
@@ -3252,7 +3374,7 @@
 
 .resource-detail-facts > div {
 	border: 1px solid var(--color-border);
-	border-radius: 0.85rem;
+	border-radius: var(--radius-xl);
 	background: var(--color-bg);
 	padding: 0.9rem 1rem;
 }
@@ -3279,7 +3401,7 @@
 }
 
 .resource-preview-area {
-	border-radius: 0.75rem;
+	border-radius: var(--radius-xl);
 	border: 1px solid var(--color-border);
 	overflow: hidden;
 	background: var(--color-bg);
@@ -3361,7 +3483,7 @@
 .resource-license-row {
 	padding: 0.9rem 1rem;
 	border: 1px solid var(--color-border);
-	border-radius: 0.85rem;
+	border-radius: var(--radius-xl);
 	background: var(--color-bg);
 }
 
@@ -3394,7 +3516,7 @@
 	gap: 1rem;
 	align-items: start;
 	border: 1px solid var(--color-border);
-	border-radius: 0.875rem;
+	border-radius: var(--radius-xl);
 	background: var(--color-surface);
 	padding: 1rem;
 }
@@ -3555,7 +3677,7 @@
 	display: grid;
 	gap: 1rem;
 	border: 1px solid var(--color-border);
-	border-radius: 1rem;
+	border-radius: var(--radius-2xl);
 	background: var(--color-surface);
 	padding: 1rem;
 }
@@ -3589,7 +3711,7 @@
 .resource-filter-panel input,
 .resource-filter-panel select {
 	width: 100%;
-	border-radius: 0.5rem;
+	border-radius: var(--radius-lg);
 	border: 1px solid var(--color-border);
 	background: var(--color-bg);
 	padding: 0.65rem 0.75rem;
@@ -3654,7 +3776,7 @@
 	justify-content: space-between;
 	gap: 1rem;
 	border: 1px solid var(--color-border);
-	border-radius: 1rem;
+	border-radius: var(--radius-2xl);
 	background: var(--color-surface);
 	padding: 1.25rem;
 	text-decoration: none;
@@ -3738,7 +3860,7 @@
 .moderation-search-bar input {
 	width: 100%;
 	height: 2.5rem;
-	border-radius: 0.5rem;
+	border-radius: var(--radius-lg);
 	border: 1px solid var(--color-border);
 	background: var(--color-bg);
 	padding-inline: 0.85rem;
@@ -3811,7 +3933,7 @@
 .role-edit-control select {
 	width: 9rem;
 	height: 2.25rem;
-	border-radius: 0.5rem;
+	border-radius: var(--radius-lg);
 	border: 1px solid var(--color-border);
 	background: var(--color-bg);
 	padding-inline: 0.75rem;
@@ -3861,7 +3983,7 @@
 	gap: 1.25rem;
 	align-items: start;
 	border: 1px solid var(--color-danger-border);
-	border-radius: 1rem;
+	border-radius: var(--radius-2xl);
 	background: var(--color-danger-surface);
 	padding: 1.25rem;
 }
@@ -3914,7 +4036,7 @@
 .resource-permanent-delete-form input {
 	width: 100%;
 	height: 2.4rem;
-	border-radius: 0.5rem;
+	border-radius: var(--radius-lg);
 	border: 1px solid var(--color-danger-border);
 	background: var(--color-bg);
 	padding-inline: 0.75rem;
@@ -3972,7 +4094,7 @@
 	width: 2.25rem;
 	height: 2.25rem;
 	border: 1px solid var(--color-border);
-	border-radius: 0.5rem;
+	border-radius: var(--radius-lg);
 	background: var(--color-bg);
 	align-items: center;
 	justify-content: center;
@@ -4001,7 +4123,7 @@
 	width: 100%;
 	align-items: center;
 	justify-content: space-between;
-	border-radius: 0.6rem;
+	border-radius: var(--radius-lg);
 	padding: 0.8rem 1rem;
 	text-align: left;
 	text-decoration: none;
@@ -4095,7 +4217,7 @@
 
 .settings-section.danger-section input[type='password'] {
 	height: 2.75rem;
-	border-radius: 0.65rem;
+	border-radius: var(--radius-lg);
 	background: var(--color-bg) !important;
 	color: var(--color-text) !important;
 	caret-color: var(--color-text);

@@ -6,6 +6,7 @@
 	import AvatarEditorModal from '$lib/components/AvatarEditorModal.svelte';
 	import BannerEditorModal from '$lib/components/BannerEditorModal.svelte';
 	import ResourceCard from '$lib/components/resources/ResourceCard.svelte';
+	import PageShell from '$lib/components/ui/PageShell.svelte';
 
 	let { data } = $props();
 
@@ -182,25 +183,26 @@
 	};
 </script>
 
-<section class="mx-auto max-w-5xl overflow-hidden rounded-2xl border border-border bg-surface">
+<PageShell wide={true}>
+<section class="profile-page-card">
 	<button
 		type="button"
-		class="relative block h-40 w-full overflow-hidden border-b border-border"
+		class="profile-banner-trigger"
 		onclick={data.isOwnProfile ? () => (showBannerModal = true) : undefined}
 		aria-label={data.isOwnProfile ? 'Edit banner image' : 'Profile banner'}
 	>
 		{#if bannerImageUrl}
-			<img class="h-full w-full object-cover" src={bannerImageUrl} alt="" />
+			<img class="profile-banner-image" src={bannerImageUrl} alt="" />
 		{:else}
-			<div class="h-full w-full" style="background-color: {data.profile.accentColor || 'var(--color-border)'}"></div>
+			<div class="profile-banner-image" style="background-color: {data.profile.accentColor || 'var(--color-border)'}"></div>
 		{/if}
 		{#if data.isOwnProfile}
-			<span class="absolute right-3 top-3 rounded-md border border-white/20 bg-black/50 px-2 py-1 text-xs text-white">Edit banner</span>
+			<span class="profile-banner-edit-chip">Edit banner</span>
 		{/if}
 	</button>
-	<div class="p-4 sm:p-6">
-		<div class="mb-4 flex items-end justify-between gap-3 border-b border-border pb-4">
-			<div class="-mt-16 rounded-2xl border-4 border-surface bg-surface">
+	<div class="profile-page-content">
+		<div class="profile-header-row">
+			<div class="profile-avatar-frame">
 				<Avatar
 					userId={data.profile.id}
 					firstName={data.profile.firstName}
@@ -215,40 +217,40 @@
 				/>
 			</div>
 			{#if data.isOwnProfile}
-				<div class="flex gap-2">
+				<div class="profile-owner-actions">
 					<button class="btn-ghost h-9 px-3" type="button" onclick={() => (showCustomizeModal = true)}>Customize profile</button>
 					<a class="btn-ghost h-9 px-3" href="/account">Settings</a>
 				</div>
 			{/if}
 		</div>
-		<div class="space-y-3">
-			<h1 class="text-2xl font-semibold text-text">{data.profile.displayName}</h1>
-			<p class="text-sm uppercase tracking-wide text-text-muted">{data.profile.role}</p>
+		<div class="profile-body">
+			<h1 class="profile-display-name">{data.profile.displayName}</h1>
+			<p class="profile-role-text">{data.profile.role}</p>
 			{#if editingBio && data.isOwnProfile}
-				<form method="POST" action="?/updateSettings" use:enhance={handleBioSubmit} class="max-w-2xl space-y-2">
-					<textarea name="bio" rows="3" class="w-full rounded-md border border-border bg-bg px-3 py-2 text-sm text-text" bind:value={bioValue}></textarea>
-					<div class="flex gap-2">
+				<form method="POST" action="?/updateSettings" use:enhance={handleBioSubmit} class="profile-bio-form">
+					<textarea name="bio" rows="3" class="profile-bio-input" bind:value={bioValue}></textarea>
+					<div class="profile-inline-actions">
 						<button type="submit" class="btn mt-0 h-9 px-3">Save</button>
 						<button type="button" class="btn-ghost h-9 px-3" onclick={() => (editingBio = false)}>Cancel</button>
 					</div>
 				</form>
 			{:else if data.profile.settings?.bio}
-				<button type="button" class="text-left text-sm text-text hover:text-primary" onclick={data.isOwnProfile ? () => (editingBio = true) : undefined}>
+				<button type="button" class="profile-bio-display" onclick={data.isOwnProfile ? () => (editingBio = true) : undefined}>
 					{data.profile.settings.bio}
 				</button>
 			{:else if data.isOwnProfile}
-				<button type="button" class="text-sm text-text-muted hover:text-primary" onclick={() => (editingBio = true)}>Add a profile description</button>
+				<button type="button" class="profile-bio-empty" onclick={() => (editingBio = true)}>Add a profile description</button>
 			{/if}
 		</div>
-		<section class="mt-6 space-y-3 border-t border-border pt-5">
-			<div class="flex items-center gap-2">
-				<h2 class="text-base font-semibold text-text">Submitted resources</h2>
-				<span class="rounded-md border border-border bg-bg px-2 py-0.5 text-xs text-text-muted">{data.submittedResources.length}</span>
+		<section class="profile-resources">
+			<div class="profile-section-header">
+				<h2>Submitted resources</h2>
+				<span>{data.submittedResources.length}</span>
 			</div>
 			{#if data.submittedResources.length === 0}
-				<p class="rounded-lg border border-border bg-bg/50 px-4 py-3 text-sm text-text-muted">{data.isOwnProfile ? 'You have not submitted any resources yet.' : 'No submitted resources yet.'}</p>
+				<p class="profile-empty-note">{data.isOwnProfile ? 'You have not submitted any resources yet.' : 'No submitted resources yet.'}</p>
 			{:else}
-				<div class="grid gap-3 md:grid-cols-2">
+				<div class="profile-resource-grid">
 					{#each data.submittedResources as resource}
 						<ResourceCard {resource} showAuthor={false} />
 					{/each}
@@ -256,24 +258,25 @@
 			{/if}
 		</section>
 		{#if data.canManageRole && !data.isOwnProfile}
-			<section class="mt-6 rounded-xl border border-border bg-bg p-4">
-				<h2 class="text-sm font-semibold text-text">Admin controls</h2>
-				<div class="mt-3 flex items-center justify-between gap-3">
-					<span class="text-sm text-text-muted">Role</span>
-					<div class="flex items-center gap-2">
-						<select class="h-9 rounded-md border border-border bg-surface px-3 text-sm text-text" aria-label="User role" onchange={handleRoleChange} disabled={roleSaving}>
+			<section class="profile-admin-panel">
+				<h2>Admin controls</h2>
+				<div class="profile-admin-row">
+					<span>Role</span>
+					<div class="profile-inline-actions">
+						<select class="profile-admin-select" aria-label="User role" onchange={handleRoleChange} disabled={roleSaving}>
 							{#each data.roleOptions as role}
 								<option value={role} selected={data.profile.role === role}>{role}</option>
 							{/each}
 						</select>
-						{#if roleSaving}<span class="text-xs text-text-muted">Saving...</span>{/if}
+						{#if roleSaving}<span class="profile-muted-xs">Saving...</span>{/if}
 					</div>
 				</div>
-				{#if roleError}<p class="mt-2 text-xs text-red-500">{roleError}</p>{/if}
+				{#if roleError}<p class="profile-error-xs">{roleError}</p>{/if}
 			</section>
 		{/if}
 	</div>
 </section>
+</PageShell>
 
 {#if showCustomizeModal}
 	<div class="fixed inset-0 z-40 flex items-center justify-center bg-black/60 p-4">

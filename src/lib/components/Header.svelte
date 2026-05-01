@@ -1,5 +1,6 @@
 <script lang="ts">
 	import type { User } from '$lib/auth';
+	import Avatar from '$lib/components/Avatar.svelte';
 	import UserMenu from '$lib/components/ui/UserMenu.svelte';
 	import MobileNav from '$lib/components/ui/MobileNav.svelte';
 
@@ -48,15 +49,39 @@
 		{:else}
 			<a class="ml-auto hidden rounded-md border border-border bg-bg px-3 py-1.5 text-sm text-text-muted no-underline hover:bg-surface hover:text-text md:inline-flex" href="/login">Login</a>
 		{/if}
-		<button
-			type="button"
-			class="ml-auto inline-flex h-9 w-9 items-center justify-center rounded-md border border-border bg-bg text-text md:hidden"
-			aria-label="Toggle navigation menu"
-			aria-expanded={mobileMenuOpen}
-			onclick={() => (mobileMenuOpen = !mobileMenuOpen)}
-		>
-			☰
-		</button>
+		<div class="ml-auto flex items-center gap-2 md:hidden">
+			<button
+				type="button"
+				class="inline-flex h-10 w-10 items-center justify-center rounded-md border border-border bg-bg text-text focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/25"
+				aria-label="Toggle navigation menu"
+				aria-expanded={mobileMenuOpen}
+				onclick={() => (mobileMenuOpen = !mobileMenuOpen)}
+			>
+				<span class="flex flex-col items-center justify-center gap-1">
+					<span class="block h-0.5 w-4 rounded-full bg-current"></span>
+					<span class="block h-0.5 w-4 rounded-full bg-current"></span>
+					<span class="block h-0.5 w-4 rounded-full bg-current"></span>
+				</span>
+			</button>
+			{#if user}
+				<a
+					href={`/profile/${user.id}`}
+					class="inline-flex h-10 w-10 items-center justify-center rounded-full no-underline transition hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/25"
+					aria-label={`${user.displayName} profile`}
+				>
+					<Avatar
+						userId={user.id}
+						firstName={user.firstName}
+						lastName={user.lastName}
+						profilePictureUrl={user.profilePictureUrl}
+						accentColor={user.accentColor}
+						avatarBackgroundColor={user.avatarBackgroundColor}
+						avatarShape={user.avatarShape}
+						size="sm"
+					/>
+				</a>
+			{/if}
+		</div>
 	</div>
 
 	<MobileNav {user} open={mobileMenuOpen} onClose={closeMobileMenu} onLogout={logout} />
