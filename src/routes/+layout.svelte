@@ -30,5 +30,5 @@
 			{@render children()}
 		</div>
 	</main>
-	<Footer />
+	<Footer user={data.user} />
 </div>

@@ -21,9 +21,8 @@
 		<div class="site-header__right">
 			<nav class="site-nav" aria-label="Primary">
 				<a href="/">Home</a>
-				<a href="/about">About</a>
+				<a href="/resources">Resources</a>
 				{#if user}
-					<a href={`/profile/${user.id}`}>Profile</a>
 					<a href="/account">Settings</a>
 				{/if}
 			</nav>

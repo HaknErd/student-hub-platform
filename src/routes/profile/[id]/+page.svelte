@@ -5,6 +5,7 @@
 	import AvatarEditorModal from '$lib/components/AvatarEditorModal.svelte';
 	import BannerEditorModal from '$lib/components/BannerEditorModal.svelte';
 	import InlineEditableField from '$lib/components/InlineEditableField.svelte';
+	import ResourceCard from '$lib/components/resources/ResourceCard.svelte';
 
 	let { data } = $props();
 
@@ -189,7 +190,14 @@
 					<div class="field-list-new">
 						<InlineEditableField label="First name" value={data.profile.firstName} field="firstName" action="?/updateField" />
 						<InlineEditableField label="Last name" value={data.profile.lastName} field="lastName" action="?/updateField" />
-						<InlineEditableField label="Email" value={data.ownEmail || ''} field="email" action="?/updateField" type="email" />
+						{#if data.canEditEmail}
+							<InlineEditableField label="Email" value={data.ownEmail || ''} field="email" action="?/updateField" type="email" />
+						{:else}
+							<div class="inline-edit-row" style="cursor: default">
+								<span class="inline-edit-label">Email</span>
+								<span class="inline-edit-value">{data.ownEmail || ''}</span>
+							</div>
+						{/if}
 						<div class="inline-edit-row" style="cursor: default">
 							<span class="inline-edit-label">Role</span>
 							<span class="inline-edit-value">{data.profile.role}</span>
@@ -325,6 +333,25 @@
 					</div>
 				{/if}
 			</div>
+
+			<section class="profile-resources-section">
+				<div class="search-group-header">
+					<h2>Submitted resources</h2>
+					<span>{data.submittedResources.length}</span>
+				</div>
+
+				{#if data.submittedResources.length === 0}
+					<p class="search-group-empty">
+						{data.isOwnProfile ? 'You have not submitted any resources yet.' : 'No submitted resources yet.'}
+					</p>
+				{:else}
+					<div class="resource-grid">
+						{#each data.submittedResources as resource}
+							<ResourceCard {resource} showAuthor={false} />
+						{/each}
+					</div>
+				{/if}
+			</section>
 		{/if}
 	</div>
 </div>

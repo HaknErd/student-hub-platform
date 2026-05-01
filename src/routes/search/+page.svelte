@@ -1,5 +1,6 @@
 <script lang="ts">
 	import Avatar from '$lib/components/Avatar.svelte';
+	import ResourceCard from '$lib/components/resources/ResourceCard.svelte';
 
 	let { data } = $props();
 
@@ -8,6 +9,7 @@
 	const showContent = $derived(data.type === 'any' || data.type === 'content');
 	const previousPage = $derived(Math.max(data.page - 1, 1));
 	const nextPage = $derived(Math.min(data.page + 1, data.totalPages));
+	const contentNextPage = $derived(Math.min(data.page + 1, data.contentTotalPages));
 
 	function pageHref(page: number) {
 		const params = new URLSearchParams();
@@ -135,12 +137,42 @@
 				<section class="search-group">
 					<header class="search-group-header">
 						<h2>Content</h2>
-						<span>TBA</span>
+						<span>{data.contentTotal}</span>
 					</header>
 
-					<p class="search-group-empty">
-						Content search is not implemented yet.
-					</p>
+					{#if data.content.length > 0}
+						<div class="resource-grid">
+							{#each data.content as resource}
+								<ResourceCard {resource} />
+							{/each}
+						</div>
+
+						{#if data.contentTotalPages > 1 && (data.type === 'any' || data.type === 'content')}
+							<nav class="search-pagination" aria-label="Content search pagination">
+								<a
+									class="btn-ghost"
+									class:disabled-link={data.page <= 1}
+									href={data.page <= 1 ? undefined : pageHref(previousPage)}
+								>
+									Previous
+								</a>
+
+								<span class="search-pagination-status">
+									Page {data.page} of {data.contentTotalPages}
+								</span>
+
+								<a
+									class="btn-ghost"
+									class:disabled-link={data.page >= data.contentTotalPages}
+									href={data.page >= data.contentTotalPages ? undefined : pageHref(contentNextPage)}
+								>
+									Next
+								</a>
+							</nav>
+						{/if}
+					{:else}
+						<p class="search-group-empty">No content results.</p>
+					{/if}
 				</section>
 			{/if}
 		</div>

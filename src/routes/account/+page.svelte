@@ -66,6 +66,9 @@
 		<aside class="settings-sidebar" aria-label="Settings sections">
 			<a href="#account" class="settings-sidebar-link active">Account</a>
 			<a href="#preferences" class="settings-sidebar-link">Preferences</a>
+			{#if data.user.role === 'admin'}
+				<a href="#server" class="settings-sidebar-link">Server</a>
+			{/if}
 			<a href="#security" class="settings-sidebar-link danger">Security</a>
 		</aside>
 
@@ -144,6 +147,24 @@
 					</label>
 				</div>
 			</section>
+
+			{#if data.user.role === 'admin'}
+				<section id="server" class="settings-section">
+					<div class="settings-section-heading">
+						<h2>Server</h2>
+						<p>Application-wide admin controls and storage reporting.</p>
+					</div>
+
+					<div class="settings-row">
+						<div>
+							<h3>Server settings</h3>
+							<p>Manage auto-verification behavior and inspect file storage by user.</p>
+						</div>
+
+						<a href="/admin/server-settings" class="btn-ghost">Open server settings</a>
+					</div>
+				</section>
+			{/if}
 
 			<section id="security" class="settings-section danger-section">
 				<div class="settings-section-heading">

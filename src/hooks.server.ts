@@ -3,9 +3,11 @@ import { getUserFromSession } from '$lib/server/auth';
 
 // Temporary route whitelist while the app is being built out.
 // Keep it strict so unfinished routes don't leak into navigation.
-const ALLOWED_PAGES = new Set<string>(['/', '/about', '/login', '/search']);
+const ALLOWED_PAGES = new Set<string>(['/', '/about', '/login', '/search', '/resources', '/resources/new', '/feedback', '/reports', '/moderation']);
 const AUTHENTICATED_PAGES = new Set<string>(['/account']);
 const ALLOWED_API_PATHS = new Set<string>(['/api/auth/login', '/api/auth/logout', '/api/search']);
+const PUBLIC_API_PREFIXES = ['/api/avatar/', '/api/banner/'];
+const ALLOWED_PAGE_PREFIXES: string[] = ['/profile/', '/resources/', '/moderation/', '/admin/'];
 
 export const handle: Handle = async ({ event, resolve }) => {
 	const pathname = event.url.pathname;
@@ -36,7 +38,7 @@ export const handle: Handle = async ({ event, resolve }) => {
 		return Response.redirect(new URL('/login', event.url), 303);
 	}
 
-	if (pathname.startsWith('/profile/')) {
+	if (ALLOWED_PAGE_PREFIXES.some((prefix) => pathname.startsWith(prefix))) {
 		return withSecurityHeaders(await resolve(event));
 	}
 

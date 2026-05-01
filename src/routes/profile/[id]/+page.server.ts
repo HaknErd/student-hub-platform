@@ -10,6 +10,7 @@ import {
 	updateUserColors,
 	updateUserSettings
 } from '$lib/server/auth';
+import { listResources } from '$lib/server/resources';
 import { isTrustedPost } from '$lib/server/request';
 
 export const load: PageServerLoad = async ({ params, locals }) => {
@@ -19,10 +20,18 @@ export const load: PageServerLoad = async ({ params, locals }) => {
 		throw error(404, 'Profile not found');
 	}
 
+	const submittedResources = await listResources({
+		createdByUserId: profile.id,
+		limit: 12,
+		includePendingForUserId: locals.user?.id === profile.id ? profile.id : null
+	});
+
 	return {
 		profile,
 		isOwnProfile: locals.user?.id === profile.id,
-		ownEmail: locals.user?.id === profile.id ? locals.user.email : null
+		ownEmail: locals.user?.id === profile.id ? locals.user.email : null,
+		canEditEmail: locals.user?.role === 'admin',
+		submittedResources
 	};
 };
 
@@ -37,6 +46,10 @@ export const actions: Actions = {
 		const field = String(form.get('field') ?? '');
 
 		if (field === 'email') {
+			if (locals.user.role !== 'admin') {
+				return fail(403, { field, error: 'Only admins can change email addresses.' });
+			}
+
 			const result = await updateUserProfile(locals.user.id, {
 				email: String(form.get('value') ?? ''),
 				firstName: locals.user.firstName,
