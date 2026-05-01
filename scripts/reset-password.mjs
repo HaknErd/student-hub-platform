@@ -22,16 +22,23 @@ const args = Object.fromEntries(
 );
 
 const email = args.email?.trim().toLowerCase();
-const password = args.password;
+const userId = args.id?.trim();
+const invalidate = args['invalidate-sessions'] !== 'false';
 
-if (!email || !password) {
-	console.error('Usage: pnpm user:reset-password -- --email=user@example.com --password="new-min-12-chars"');
+if (!email && !userId) {
+	console.error('Usage: pnpm user:reset-password -- --email=user@example.com [--invalidate-sessions=true]');
+	console.error('       pnpm user:reset-password -- --id=<uuid> [--invalidate-sessions=true]');
 	process.exit(1);
 }
 
-if (password.length < 12) {
-	console.error('Password must be at least 12 characters.');
-	process.exit(1);
+function generatePassword() {
+	const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%&*';
+	let password = '';
+	const bytes = randomBytes(24);
+	for (let i = 0; i < bytes.length; i++) {
+		password += chars[bytes[i] % chars.length];
+	}
+	return password;
 }
 
 async function hashPassword(input) {
@@ -44,21 +51,41 @@ async function hashPassword(input) {
 const pool = new Pool({ connectionString: databaseUrl });
 
 try {
-	const result = await pool.query(
-		`update users
-		 set password_hash = $2, updated_at = now()
-		 where email = $1
-		   and disabled_at is null
-		 returning email`,
-		[email, await hashPassword(password)]
-	);
+	let lookupResult;
+	if (email) {
+		lookupResult = await pool.query(
+			'select id, email, first_name, last_name, display_name from users where email = $1 limit 1',
+			[email]
+		);
+	} else {
+		lookupResult = await pool.query(
+			'select id, email, first_name, last_name, display_name from users where id = $1 limit 1',
+			[userId]
+		);
+	}
 
-	if (result.rowCount === 0) {
-		console.error(`No active user found with email: ${email}`);
+	if (lookupResult.rowCount !== 1) {
+		console.error('User not found.');
 		process.exit(1);
 	}
 
-	console.log(`Password updated: ${email}`);
+	const user = lookupResult.rows[0];
+	const newPassword = generatePassword();
+
+	await pool.query(
+		'update users set password_hash = $2, updated_at = now(), disabled_at = null where id = $1',
+		[user.id, await hashPassword(newPassword)]
+	);
+
+	if (invalidate) {
+		await pool.query('delete from sessions where user_id = $1', [user.id]);
+	}
+
+	console.log(`Password reset for: ${user.email} (${user.display_name})`);
+	console.log(`New password: ${newPassword}`);
+	if (invalidate) {
+		console.log('All existing sessions invalidated.');
+	}
 } finally {
 	await pool.end();
 }
