@@ -6,8 +6,8 @@
 		currentShape?: AvatarShape;
 		currentImageUrl?: string | null;
 		onclose: () => void;
-		onremove?: () => void;
-		onsave: (blob: Blob, shape: AvatarShape) => void;
+		onremove?: () => void | Promise<void>;
+		onsave: (blob: Blob, shape: AvatarShape) => void | Promise<void>;
 	};
 
 	let { currentShape = 'rounded-xl', currentImageUrl = null, onclose, onremove, onsave }: Props = $props();

@@ -2,8 +2,7 @@ import { dev } from '$app/environment';
 import type { Cookies, RequestEvent } from '@sveltejs/kit';
 import { randomBytes, createHash } from 'node:crypto';
 import { unlink, mkdir, writeFile, readFile } from 'node:fs/promises';
-import { join, dirname } from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { basename, join } from 'node:path';
 import type { PublicProfile, User } from '$lib/auth';
 import { db } from '$lib/server/db';
 import { hashPassword, verifyPassword } from '$lib/server/password';
@@ -23,9 +22,11 @@ const AVATAR_MAX_BYTES = 4_194_304;
 const BANNER_MAX_BYTES = 4_194_304;
 const ALLOWED_AVATAR_TYPES = new Set(['image/png', 'image/jpeg', 'image/webp']);
 
-const projectRoot = dirname(dirname(dirname(fileURLToPath(import.meta.url))));
-const avatarsDir = join(projectRoot, 'data', 'avatars');
-const bannersDir = join(projectRoot, 'data', 'banners');
+const storageRoot = process.env.STORAGE_DIR ?? join(process.cwd(), 'data');
+const avatarsDir = join(storageRoot, 'avatars');
+const bannersDir = join(storageRoot, 'banners');
+const HEX_COLOR_RE = /^#[0-9a-fA-F]{6}$/;
+const ALLOWED_USER_SETTING_KEYS = new Set(['theme', 'compactMode', 'avatarShape', 'bio']);
 
 function normalizeEmail(email: string) {
 	return email.trim().toLowerCase();
@@ -357,6 +358,7 @@ export async function readAvatarFile(userId: string): Promise<{ data: Buffer; mi
 	if (result.rowCount !== 1 || !result.rows[0].profile_picture_url) return null;
 
 	const filename = String(result.rows[0].profile_picture_url);
+	if (basename(filename) !== filename) return null;
 	const filepath = join(avatarsDir, filename);
 
 	try {
@@ -460,6 +462,7 @@ export async function readBannerFile(userId: string): Promise<{ data: Buffer; mi
 	if (result.rowCount !== 1 || !result.rows[0].banner_picture_url) return null;
 
 	const filename = String(result.rows[0].banner_picture_url);
+	if (basename(filename) !== filename) return null;
 	const filepath = join(bannersDir, filename);
 
 	try {
@@ -559,7 +562,7 @@ export async function updateUserColors(
 	const accentColor = input.accentColor.trim();
 	const avatarBackgroundColor = input.avatarBackgroundColor.trim();
 
-	if (!accentColor || !avatarBackgroundColor) {
+	if (!HEX_COLOR_RE.test(accentColor) || !HEX_COLOR_RE.test(avatarBackgroundColor)) {
 		return { ok: false, reason: 'invalid_input' };
 	}
 
@@ -574,15 +577,49 @@ export async function updateUserColors(
 	return { ok: true };
 }
 
+export function sanitizeUserSettings(input: Record<string, unknown>) {
+	const settings: Record<string, unknown> = {};
+
+	for (const [key, value] of Object.entries(input)) {
+		if (!ALLOWED_USER_SETTING_KEYS.has(key)) continue;
+
+		if (key === 'theme') {
+			if (value === 'system' || value === 'light' || value === 'dark') settings.theme = value;
+			continue;
+		}
+
+		if (key === 'compactMode') {
+			if (value === 'true' || value === 'false' || typeof value === 'boolean') {
+				settings.compactMode = String(value);
+			}
+			continue;
+		}
+
+		if (key === 'avatarShape') {
+			if (value === 'rounded-xl' || value === 'rounded-full') settings.avatarShape = value;
+			continue;
+		}
+
+		if (key === 'bio' && typeof value === 'string') {
+			settings.bio = value.trim().slice(0, 1000);
+		}
+	}
+
+	return settings;
+}
+
 export async function updateUserSettings(
 	userId: string,
 	input: Record<string, unknown>
-): Promise<{ ok: true } | { ok: false; reason: 'not_found' }> {
+): Promise<{ ok: true } | { ok: false; reason: 'invalid_input' | 'not_found' }> {
+	const settings = sanitizeUserSettings(input);
+	if (!Object.keys(settings).length) return { ok: false, reason: 'invalid_input' };
+
 	const result = await db.query(
-		`update users set settings = settings || $2::jsonb, updated_at = now()
+		`update users set settings = coalesce(settings, '{}'::jsonb) || $2::jsonb, updated_at = now()
 		 where id = $1 and disabled_at is null
 		 returning id`,
-		[userId, JSON.stringify(input)]
+		[userId, JSON.stringify(settings)]
 	);
 
 	if (result.rowCount !== 1) return { ok: false, reason: 'not_found' };
@@ -604,9 +641,11 @@ export type SearchResult = {
 
 export async function searchProfiles(query: string, limit = 20): Promise<SearchResult[]> {
 	const normalized = query.trim();
+	const safeLimit = Math.min(Math.max(limit, 1), 50);
 	if (!normalized) return [];
 
-	const terms = normalized.split(/\s+/).filter(Boolean);
+	const terms = normalized.split(/\s+/).filter(Boolean).slice(0, 5);
+	const likeQuery = `%${normalized}%`;
 
 	const conditions = terms
 		.map((_, i) => `
@@ -622,7 +661,7 @@ export async function searchProfiles(query: string, limit = 20): Promise<SearchR
 		`)
 		.join(' or ');
 
-	const args = [...terms, `%${normalized}%`];
+	const args = [...terms, likeQuery, normalized];
 
 	const result = await db.query(
 		`
@@ -630,17 +669,17 @@ export async function searchProfiles(query: string, limit = 20): Promise<SearchR
 				id, first_name, last_name, display_name, role,
 				profile_picture_url, accent_color, avatar_background_color, settings,
 				greatest(
-					similarity(first_name, $${terms.length + 1}),
-					similarity(last_name, $${terms.length + 1}),
-					similarity(display_name, $${terms.length + 1})
+					similarity(first_name, $${terms.length + 2}),
+					similarity(last_name, $${terms.length + 2}),
+					similarity(display_name, $${terms.length + 2})
 				) as similarity
 			from users
 			where disabled_at is null
 				and (${conditions})
 			order by similarity desc
-			limit $${terms.length + 2}
+			limit $${terms.length + 3}
 		`,
-		[...args, limit]
+		[...args, safeLimit]
 	);
 
 	return result.rows.map((row) => ({
@@ -650,7 +689,6 @@ export async function searchProfiles(query: string, limit = 20): Promise<SearchR
 		displayName: String(row.display_name),
 		role: String(row.role),
 		profilePictureUrl: row.profile_picture_url ? String(row.profile_picture_url) : null,
-		bannerPictureUrl: row.banner_picture_url ? String(row.banner_picture_url) : null,
 		accentColor: row.accent_color ? String(row.accent_color) : null,
 		avatarBackgroundColor: row.avatar_background_color ? String(row.avatar_background_color) : null,
 		avatarShape: resolveAvatarShape((row.settings as Record<string, unknown>) ?? {}),

@@ -4,7 +4,7 @@ import { searchProfiles } from '$lib/server/auth';
 
 export const GET: RequestHandler = async ({ url }) => {
 	const q = url.searchParams.get('q') ?? '';
-	const limit = Math.min(Number(url.searchParams.get('limit')) || 20, 50);
+	const limit = Math.min(Math.max(Number(url.searchParams.get('limit')) || 20, 1), 50);
 
 	const results = await searchProfiles(q, limit);
 	return json(results);

@@ -39,9 +39,10 @@ export async function updateAppSettings(input: Partial<AppSettings>) {
 		...input
 	};
 
-	await db.query('begin');
+	const client = await db.connect();
 	try {
-		await db.query(
+		await client.query('begin');
+		await client.query(
 			`
 				insert into app_settings (key, value)
 				values ('autoVerifyPrivilegedResourceSubmissions', $1::jsonb)
@@ -52,11 +53,13 @@ export async function updateAppSettings(input: Partial<AppSettings>) {
 			[JSON.stringify(settings.autoVerifyPrivilegedResourceSubmissions)]
 		);
 
-		await db.query('commit');
+		await client.query('commit');
 		return { ok: true as const };
 	} catch (error) {
-		await db.query('rollback');
+		await client.query('rollback');
 		throw error;
+	} finally {
+		client.release();
 	}
 }
 

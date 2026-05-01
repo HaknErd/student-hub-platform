@@ -16,12 +16,11 @@
 
 	let showAvatarModal = $state(false);
 	let showBannerModal = $state(false);
-	let savingAvatar = $state(false);
-	let savingBanner = $state(false);
 	let isEditingProfile = $state(false);
 	let bioValue = $state('');
 	let customAccentColor = $state('#2563eb');
 	let customAvatarColor = $state('#2563eb');
+	let mediaError = $state('');
 
 	let profileImageUrl = $derived(data.profile.profilePictureUrl ? `/api/avatar/${data.profile.id}?v=${data.profile.profilePictureUrl}` : null);
 	let bannerImageUrl = $derived(data.profile.bannerPictureUrl ? `/api/banner/${data.profile.id}?v=${data.profile.bannerPictureUrl}` : null);
@@ -37,80 +36,105 @@
 	}
 
 	async function handleAvatarSave(blob: Blob, shape: 'rounded-xl' | 'rounded-full') {
-		savingAvatar = true;
+		mediaError = '';
 
 		const formData = new FormData();
 		formData.append('avatar', blob, 'avatar.webp');
 		formData.append('avatarShape', shape);
 
-		try {
-			const res = await fetch(`/profile/${data.profile.id}?/updateAvatar`, {
-				method: 'POST',
-				body: formData
-			});
+		const res = await fetch(`/profile/${data.profile.id}?/updateAvatar`, {
+			method: 'POST',
+			body: formData
+		});
 
-			if (!res.ok) throw new Error('Avatar upload failed');
-
-			showAvatarModal = false;
-			await reloadProfileData();
-		} finally {
-			savingAvatar = false;
+		if (!res.ok) {
+			mediaError = 'Could not update profile picture.';
+			throw new Error('Avatar upload failed');
 		}
+
+		showAvatarModal = false;
+		await reloadProfileData();
 	}
 
 	async function handleBannerSave(blob: Blob) {
-		savingBanner = true;
+		mediaError = '';
 
 		const formData = new FormData();
 		formData.append('banner', blob, 'banner.webp');
 
-		try {
-			const res = await fetch(`/profile/${data.profile.id}?/updateBanner`, {
-				method: 'POST',
-				body: formData
-			});
+		const res = await fetch(`/profile/${data.profile.id}?/updateBanner`, {
+			method: 'POST',
+			body: formData
+		});
 
-			if (!res.ok) throw new Error('Banner upload failed');
-
-			showBannerModal = false;
-			await reloadProfileData();
-		} finally {
-			savingBanner = false;
+		if (!res.ok) {
+			mediaError = 'Could not update banner image.';
+			throw new Error('Banner upload failed');
 		}
+
+		showBannerModal = false;
+		await reloadProfileData();
 	}
 
-	function handleRemoveAvatar() {
+	async function handleRemoveAvatar() {
+		mediaError = '';
 		const formData = new FormData();
 		formData.append('remove', '1');
 
-		fetch(`/profile/${data.profile.id}?/updateAvatar`, {
+		const res = await fetch(`/profile/${data.profile.id}?/updateAvatar`, {
 			method: 'POST',
 			body: formData
-		}).then(reloadProfileData);
+		});
+
+		if (!res.ok) {
+			mediaError = 'Could not remove profile picture.';
+			throw new Error('Avatar remove failed');
+		}
+
+		await reloadProfileData();
 	}
 
-	function handleRemoveBanner() {
+	async function handleRemoveBanner() {
+		mediaError = '';
 		const formData = new FormData();
 		formData.append('remove', '1');
 
-		fetch(`/profile/${data.profile.id}?/updateBanner`, {
+		const res = await fetch(`/profile/${data.profile.id}?/updateBanner`, {
 			method: 'POST',
 			body: formData
-		}).then(reloadProfileData);
+		});
+
+		if (!res.ok) {
+			mediaError = 'Could not remove banner image.';
+			throw new Error('Banner remove failed');
+		}
+
+		await reloadProfileData();
 	}
 
 	function handleColorSubmit() {
-		return ({ update }: any) => update();
+		return ({ update }: any) => {
+			mediaError = '';
+			update();
+		};
 	}
 
-	function handleAvatarShapeChange(shape: 'rounded-xl' | 'rounded-full') {
+	async function handleAvatarShapeChange(shape: 'rounded-xl' | 'rounded-full') {
+		mediaError = '';
 		const formData = new FormData();
 		formData.append('value', shape);
 
-		fetch(`/profile/${data.profile.id}?/updateAvatarShape`, {
+		const res = await fetch(`/profile/${data.profile.id}?/updateAvatarShape`, {
 			method: 'POST',
 			body: formData
-		}).then(reloadProfileData);
+		});
+
+		if (!res.ok) {
+			mediaError = 'Could not update avatar shape.';
+			return;
+		}
+
+		await reloadProfileData();
 	}
 
 	function handleBioSubmit() {
@@ -224,6 +248,10 @@
 
 				<div class="profile-edit-section">
 					<h2 class="profile-edit-heading">Profile Customization</h2>
+
+					{#if mediaError}
+						<p class="form-error">{mediaError}</p>
+					{/if}
 
 					<div class="profile-media-actions">
 						<button type="button" class="btn-ghost" onclick={() => (showAvatarModal = true)}>

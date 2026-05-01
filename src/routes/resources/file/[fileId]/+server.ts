@@ -9,7 +9,7 @@ export const GET: RequestHandler = async ({ params, locals }) => {
 	const file = await getResourceFileForDownload(params.fileId, locals.user);
 	if (!file) throw error(404, 'File not found');
 
-	return new Response(file.data, {
+	return new Response(new Uint8Array(file.data), {
 		headers: {
 			'Content-Type': file.mimeType,
 			'Content-Disposition': `attachment; filename="${file.filename.replaceAll('"', '')}"`,

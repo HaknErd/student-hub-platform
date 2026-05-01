@@ -700,7 +700,7 @@
 
 	.profile-avatar-wrapper {
 		@apply rounded-xl sm:rounded-2xl border-4 border-surface bg-surface shadow-sm inline-block;
-		& :global(.avatar) {
+		& .avatar {
 			@apply w-24 h-24 sm:w-32 sm:h-32 text-3xl sm:text-4xl;
 		}
 	}
@@ -1346,7 +1346,7 @@
 	box-shadow: 0 10px 25px rgb(0 0 0 / 18%);
 }
 
-.profile-avatar-wrapper :global(.avatar),
+.profile-avatar-wrapper .avatar,
 .profile-avatar-wrapper .avatar {
 	width: 8rem;
 	height: 8rem;
@@ -1405,7 +1405,7 @@
 		margin-top: -3rem;
 	}
 
-	.profile-avatar-wrapper :global(.avatar),
+	.profile-avatar-wrapper .avatar,
 	.profile-avatar-wrapper .avatar {
 		width: 6rem;
 		height: 6rem;
@@ -1512,7 +1512,7 @@
 	box-shadow: 0 10px 25px rgb(0 0 0 / 18%);
 }
 
-.profile-avatar-wrapper :global(.avatar),
+.profile-avatar-wrapper .avatar,
 .profile-avatar-wrapper .avatar {
 	width: 8rem;
 	height: 8rem;
@@ -1592,7 +1592,7 @@
 		margin-top: -3rem;
 	}
 
-	.profile-avatar-wrapper :global(.avatar),
+	.profile-avatar-wrapper .avatar,
 	.profile-avatar-wrapper .avatar {
 		width: 6rem;
 		height: 6rem;
@@ -1624,7 +1624,7 @@
 }
 
 /* 8rem avatar => half overlap = -4rem */
-.profile-avatar-wrapper :global(.avatar),
+.profile-avatar-wrapper .avatar,
 .profile-avatar-wrapper .avatar {
 	width: 8rem;
 	height: 8rem;
@@ -1640,7 +1640,7 @@
 		margin-top: 3.4rem;
 	}
 
-	.profile-avatar-wrapper :global(.avatar),
+	.profile-avatar-wrapper .avatar,
 	.profile-avatar-wrapper .avatar {
 		width: 6rem;
 		height: 6rem;
@@ -1685,7 +1685,7 @@
 	box-shadow: 0 10px 25px rgb(0 0 0 / 18%);
 }
 
-.profile-avatar-wrapper :global(.avatar),
+.profile-avatar-wrapper .avatar,
 .profile-avatar-wrapper .avatar {
 	width: 8rem !important;
 	height: 8rem !important;
@@ -1742,7 +1742,7 @@
 		min-height: 3.25rem;
 	}
 
-	.profile-avatar-wrapper :global(.avatar),
+	.profile-avatar-wrapper .avatar,
 	.profile-avatar-wrapper .avatar {
 		width: 6rem !important;
 		height: 6rem !important;

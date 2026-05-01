@@ -56,6 +56,12 @@
 	$effect(() => {
 		if (!pending) currentStatus = item.status;
 	});
+
+	$effect(() => {
+		return () => {
+			clearSavedTimer();
+		};
+	});
 </script>
 
 <article class="moderation-card" class:danger-card={danger}>
@@ -120,6 +126,7 @@
 				aria-label={`Update ${kind} status`}
 				onchange={(event) => event.currentTarget.form?.requestSubmit()}
 			>
+			<option value="submitted">Submitted</option>
 			<option value="triaged">Triaged</option>
 
 			{#if kind === 'report'}

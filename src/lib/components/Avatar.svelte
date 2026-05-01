@@ -29,7 +29,7 @@
 
 	let imageFailed = $state(false);
 
-	const initials = $derived(`${firstName[0]}${lastName[0]}`);
+	const initials = $derived(`${firstName?.[0] ?? ''}${lastName?.[0] ?? ''}`.toUpperCase() || '?');
 	const avatarUrl = $derived(!profilePictureUrl ? null : `/api/avatar/${userId}?v=${profilePictureUrl}`);
 
 	function onImageError() {
@@ -41,10 +41,20 @@
 			onclickavatar();
 		}
 	}
+
+	$effect(() => {
+		avatarUrl;
+		imageFailed = false;
+	});
 </script>
 
 {#if editable && onclickavatar}
-	<button type="button" class="avatar-editable {avatarShape}" onclick={handleClick}>
+	<button
+		type="button"
+		class="avatar-editable {avatarShape}"
+		onclick={handleClick}
+		aria-label="Edit profile picture"
+	>
 		{#if profilePictureUrl && !imageFailed}
 			<img
 				class="avatar {size} {avatarShape}"

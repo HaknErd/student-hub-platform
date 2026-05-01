@@ -14,8 +14,8 @@
 		outputHeight?: number;
 		allowShape?: boolean;
 		onclose: () => void;
-		onremove?: () => void;
-		onsave: (blob: Blob, shape: AvatarShape) => void;
+		onremove?: () => void | Promise<void>;
+		onsave: (blob: Blob, shape: AvatarShape) => void | Promise<void>;
 	};
 
 	let {
@@ -124,6 +124,7 @@
 		const input = event.currentTarget as HTMLInputElement;
 		const file = input.files?.[0];
 		if (file) loadFile(file);
+		input.value = '';
 	}
 
 	function handleDragOver(event: DragEvent) {
@@ -237,16 +238,22 @@
 	}
 
 	async function handleSave() {
+		error = '';
 		saving = true;
 
-		const blob = await createCropBlob();
-		if (!blob) {
-			error = 'Could not create cropped image.';
-			saving = false;
-			return;
-		}
+		try {
+			const blob = await createCropBlob();
+			if (!blob) {
+				error = 'Could not create cropped image.';
+				return;
+			}
 
-		onsave(blob, shape);
+			await onsave(blob, shape);
+		} catch {
+			error = 'Could not save image.';
+		} finally {
+			saving = false;
+		}
 	}
 
 	function handleCancel() {
@@ -254,9 +261,17 @@
 		onclose();
 	}
 
-	function handleRemove() {
-		onremove?.();
-		onclose();
+	async function handleRemove() {
+		error = '';
+		saving = true;
+		try {
+			await onremove?.();
+			onclose();
+		} catch {
+			error = 'Could not remove image.';
+		} finally {
+			saving = false;
+		}
 	}
 
 	$effect(() => {

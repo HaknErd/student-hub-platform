@@ -1,5 +1,5 @@
 import { createHash, randomBytes } from 'node:crypto';
-import { mkdir, readFile, writeFile } from 'node:fs/promises';
+import { mkdir, readFile, unlink, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import type { RequestEvent } from '@sveltejs/kit';
 import type { User } from '$lib/auth';
@@ -26,6 +26,9 @@ const ALLOWED_FILE_TYPES = new Set([
 ]);
 
 const fileDir = join(process.cwd(), 'data', 'resource-files');
+type Queryable = {
+	query: (text: string, values?: unknown[]) => Promise<{ rowCount: number | null; rows: Record<string, unknown>[] }>;
+};
 
 export const RESOURCE_TYPES = [
 	'study_guide',
@@ -147,11 +150,11 @@ function cleanOptionalText(value: FormDataEntryValue | null, max = 500) {
 
 function parseYearGroup(value: FormDataEntryValue | null) {
 	const raw = String(value ?? '').trim();
-	if (!raw) return null;
+	if (!raw) return { ok: true as const, value: null };
 
 	const year = Number(raw);
-	if (!Number.isInteger(year) || year < 8 || year > 13) return null;
-	return year;
+	if (!Number.isInteger(year) || year < 8 || year > 13) return { ok: false as const };
+	return { ok: true as const, value: year };
 }
 
 function isResourceType(value: string): value is ResourceType {
@@ -453,13 +456,53 @@ export async function getResourceById(id: string, user: User | null): Promise<Re
 	return canView ? resource : null;
 }
 
+type PreparedResourceFile = {
+	objectKey: string;
+	originalFilename: string;
+	mimeType: string;
+	sizeBytes: number;
+	sha256: string;
+	buffer: Buffer;
+};
+
+async function prepareResourceFile(file: File): Promise<PreparedResourceFile | { ok: false; reason: 'invalid_file_type' | 'file_too_large' }> {
+	if (!ALLOWED_FILE_TYPES.has(file.type)) {
+		return { ok: false as const, reason: 'invalid_file_type' };
+	}
+
+	if (file.size > FILE_MAX_BYTES) {
+		return { ok: false as const, reason: 'file_too_large' };
+	}
+
+	const buffer = Buffer.from(await file.arrayBuffer());
+	const sha256 = createHash('sha256').update(buffer).digest('hex');
+	const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_').slice(0, 160) || 'file';
+
+	return {
+		objectKey: `${randomBytes(16).toString('hex')}-${safeName}`,
+		originalFilename: file.name,
+		mimeType: file.type,
+		sizeBytes: file.size,
+		sha256,
+		buffer
+	};
+}
+
+async function deleteStoredFile(objectKey: string) {
+	try {
+		await unlink(join(fileDir, objectKey));
+	} catch {
+		// file may already be gone
+	}
+}
+
 export async function createResourceSubmission(event: RequestEvent, user: User) {
 	const form = await event.request.formData();
 
 	const title = cleanText(form.get('title'), 120);
 	const description = cleanText(form.get('description'), 2000);
 	const subject = cleanText(form.get('subject'), 80);
-	const yearGroup = parseYearGroup(form.get('yearGroup'));
+	const yearGroupResult = parseYearGroup(form.get('yearGroup'));
 	const curriculumRaw = cleanText(form.get('curriculum'), 40);
 	const levelRaw = cleanText(form.get('level'), 20);
 	const typeRaw = cleanText(form.get('type'), 40);
@@ -471,6 +514,10 @@ export async function createResourceSubmission(event: RequestEvent, user: User) 
 	const format = isResourceFormat(formatRaw) ? formatRaw : null;
 	const externalUrl = cleanOptionalText(form.get('externalUrl'), 1000);
 	const licenseConfirmed = form.get('licenseConfirmed') === 'on';
+
+	if (!yearGroupResult.ok) {
+		return { ok: false as const, reason: 'invalid_input' };
+	}
 
 	if (!title || !subject || !isResourceType(typeRaw)) {
 		return { ok: false as const, reason: 'invalid_input' };
@@ -493,6 +540,11 @@ export async function createResourceSubmission(event: RequestEvent, user: User) 
 
 	const file = form.get('resourceFile');
 	const hasFile = file instanceof File && file.size > 0;
+	const preparedFile = hasFile ? await prepareResourceFile(file) : null;
+
+	if (preparedFile && 'ok' in preparedFile && !preparedFile.ok) {
+		return preparedFile;
+	}
 
 	if (!externalUrl && !hasFile) {
 		return { ok: false as const, reason: 'missing_content' };
@@ -503,52 +555,67 @@ export async function createResourceSubmission(event: RequestEvent, user: User) 
 		appSettings.autoVerifyPrivilegedResourceSubmissions && isModerator(user);
 	const status = autoVerifyPrivileged ? 'verified' : 'pending_review';
 
-	const resourceResult = await db.query(
-		`
-			insert into resources (
+	const client = await db.connect();
+	let resourceId = '';
+	let storedObjectKey: string | null = null;
+	try {
+		await client.query('begin');
+		const resourceResult = await client.query(
+			`
+				insert into resources (
+					title,
+					description,
+					subject,
+					year_group,
+					curriculum,
+					level,
+					format,
+					type,
+					status,
+					created_by,
+					verified_by,
+					verified_at,
+					license_confirmed,
+					external_url
+				)
+				values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, case when $11::uuid is null then null else now() end, $12, $13)
+				returning id
+			`,
+			[
 				title,
 				description,
 				subject,
-				year_group,
+				yearGroupResult.value,
 				curriculum,
 				level,
 				format,
-				type,
+				typeRaw,
 				status,
-				created_by,
-				verified_by,
-				verified_at,
-				license_confirmed,
-				external_url
-			)
-			values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, case when $11::uuid is null then null else now() end, $12, $13)
-			returning id
-		`,
-		[
-			title,
-			description,
-			subject,
-			yearGroup,
-			curriculum,
-			level,
-			format,
-			typeRaw,
-			status,
-			user.id,
-			status === 'verified' ? user.id : null,
-			licenseConfirmed,
-			externalUrl
-		]
-	);
+				user.id,
+				status === 'verified' ? user.id : null,
+				licenseConfirmed,
+				externalUrl
+			]
+		);
 
-	const resourceId = String(resourceResult.rows[0].id);
+		resourceId = String(resourceResult.rows[0].id);
 
-	if (hasFile) {
-		const upload = await saveResourceFile(resourceId, file);
-		if (!upload.ok) {
-			await db.query('delete from resources where id = $1', [resourceId]);
-			return upload;
+		if (preparedFile && !('ok' in preparedFile)) {
+			const upload = await saveResourceFile(client, resourceId, preparedFile);
+			storedObjectKey = upload.objectKey;
 		}
+
+		await client.query('commit');
+	} catch (error) {
+		try {
+			await client.query('rollback');
+		} catch {
+			// ignore rollback failures
+		}
+		if (storedObjectKey) await deleteStoredFile(storedObjectKey);
+		throw error;
+	} finally {
+		client.release();
 	}
 
 	await writeAudit(user.id, 'resource.create', 'resource', resourceId, { status, type: typeRaw });
@@ -556,39 +623,30 @@ export async function createResourceSubmission(event: RequestEvent, user: User) 
 	return { ok: true as const, id: resourceId, status };
 }
 
-async function saveResourceFile(resourceId: string, file: File) {
-	if (!ALLOWED_FILE_TYPES.has(file.type)) {
-		return { ok: false as const, reason: 'invalid_file_type' };
-	}
-
-	if (file.size > FILE_MAX_BYTES) {
-		return { ok: false as const, reason: 'file_too_large' };
-	}
-
-	const buffer = Buffer.from(await file.arrayBuffer());
-	const sha256 = createHash('sha256').update(buffer).digest('hex');
-	const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_').slice(0, 160) || 'file';
-	const objectKey = `${randomBytes(16).toString('hex')}-${safeName}`;
-
+async function saveResourceFile(queryable: Queryable, resourceId: string, file: PreparedResourceFile) {
 	await mkdir(fileDir, { recursive: true });
-	await writeFile(join(fileDir, objectKey), buffer);
+	await writeFile(join(fileDir, file.objectKey), file.buffer);
 
-	await db.query(
-		`
-			insert into resource_files (
-				resource_id,
-				object_key,
-				original_filename,
-				mime_type,
-				size_bytes,
-				sha256
-			)
-			values ($1, $2, $3, $4, $5, $6)
-		`,
-		[resourceId, objectKey, file.name, file.type, file.size, sha256]
-	);
-
-	return { ok: true as const };
+	try {
+		await queryable.query(
+			`
+				insert into resource_files (
+					resource_id,
+					object_key,
+					original_filename,
+					mime_type,
+					size_bytes,
+					sha256
+				)
+				values ($1, $2, $3, $4, $5, $6)
+			`,
+			[resourceId, file.objectKey, file.originalFilename, file.mimeType, file.sizeBytes, file.sha256]
+		);
+		return { ok: true as const, objectKey: file.objectKey };
+	} catch (error) {
+		await deleteStoredFile(file.objectKey);
+		throw error;
+	}
 }
 
 export async function updateResourceByModerator(event: RequestEvent, moderator: User, resourceId: string) {
@@ -599,7 +657,7 @@ export async function updateResourceByModerator(event: RequestEvent, moderator: 
 	const title = cleanText(form.get('title'), 120);
 	const description = cleanText(form.get('description'), 2000);
 	const subject = cleanText(form.get('subject'), 80);
-	const yearGroup = parseYearGroup(form.get('yearGroup'));
+	const yearGroupResult = parseYearGroup(form.get('yearGroup'));
 
 	const curriculumRaw = cleanText(form.get('curriculum'), 40);
 	const levelRaw = cleanText(form.get('level'), 20);
@@ -612,7 +670,7 @@ export async function updateResourceByModerator(event: RequestEvent, moderator: 
 	const level = ['HL', 'SL', 'OTHER'].includes(levelRaw) ? levelRaw : null;
 	const format = isResourceFormat(formatRaw) ? formatRaw : null;
 
-	if (!title || !subject || !isResourceType(typeRaw)) {
+	if (!yearGroupResult.ok || !title || !subject || !isResourceType(typeRaw)) {
 		return { ok: false as const, reason: 'invalid_input' };
 	}
 
@@ -654,7 +712,7 @@ export async function updateResourceByModerator(event: RequestEvent, moderator: 
 			title,
 			description,
 			subject,
-			yearGroup,
+			yearGroupResult.value,
 			curriculum,
 			level,
 			format,
@@ -707,7 +765,7 @@ export async function updateOwnSubmission(event: RequestEvent, actor: User, reso
 	const title = cleanText(form.get('title'), 120);
 	const description = cleanText(form.get('description'), 2000);
 	const subject = cleanText(form.get('subject'), 80);
-	const yearGroup = parseYearGroup(form.get('yearGroup'));
+	const yearGroupResult = parseYearGroup(form.get('yearGroup'));
 	const curriculumRaw = cleanText(form.get('curriculum'), 40);
 	const levelRaw = cleanText(form.get('level'), 20);
 	const formatRaw = cleanText(form.get('format'), 40);
@@ -719,7 +777,7 @@ export async function updateOwnSubmission(event: RequestEvent, actor: User, reso
 	const level = ['HL', 'SL', 'OTHER'].includes(levelRaw) ? levelRaw : null;
 	const format = isResourceFormat(formatRaw) ? formatRaw : null;
 
-	if (!title || !subject || !isResourceType(typeRaw)) {
+	if (!yearGroupResult.ok || !title || !subject || !isResourceType(typeRaw)) {
 		return { ok: false as const, reason: 'invalid_input' };
 	}
 
@@ -765,7 +823,7 @@ export async function updateOwnSubmission(event: RequestEvent, actor: User, reso
 			title,
 			description,
 			subject,
-			yearGroup,
+			yearGroupResult.value,
 			curriculum,
 			level,
 			format,
@@ -816,7 +874,7 @@ export async function submitResourceRevision(event: RequestEvent, actor: User, r
 	const title = cleanText(form.get('title'), 120);
 	const description = cleanText(form.get('description'), 2000);
 	const subject = cleanText(form.get('subject'), 80);
-	const yearGroup = parseYearGroup(form.get('yearGroup'));
+	const yearGroupResult = parseYearGroup(form.get('yearGroup'));
 	const curriculumRaw = cleanText(form.get('curriculum'), 40);
 	const levelRaw = cleanText(form.get('level'), 20);
 	const formatRaw = cleanText(form.get('format'), 40);
@@ -828,7 +886,7 @@ export async function submitResourceRevision(event: RequestEvent, actor: User, r
 	const level = ['HL', 'SL', 'OTHER'].includes(levelRaw) ? levelRaw : null;
 	const format = isResourceFormat(formatRaw) ? formatRaw : null;
 
-	if (!title || !subject || !isResourceType(typeRaw)) {
+	if (!yearGroupResult.ok || !title || !subject || !isResourceType(typeRaw)) {
 		return { ok: false as const, reason: 'invalid_input' };
 	}
 
@@ -853,69 +911,107 @@ export async function submitResourceRevision(event: RequestEvent, actor: User, r
 		return { ok: false as const, reason: 'missing_content' };
 	}
 
-	const result = await db.query(
-		`
-			insert into resources (
+	const client = await db.connect();
+	let revisionId = '';
+	let copiedObjectKey: string | null = null;
+	try {
+		await client.query('begin');
+		const result = await client.query(
+			`
+				insert into resources (
+					title,
+					description,
+					subject,
+					year_group,
+					curriculum,
+					level,
+					format,
+					type,
+					status,
+					created_by,
+					verified_by,
+					verified_at,
+					license_confirmed,
+					external_url,
+					revision_of
+				)
+				values ($1, $2, $3, $4, $5, $6, $7, $8, 'pending_review', $9, null, null, $10, $11, $12)
+				returning id
+			`,
+			[
 				title,
 				description,
 				subject,
-				year_group,
+				yearGroupResult.value,
 				curriculum,
 				level,
 				format,
-				type,
-				status,
-				created_by,
-				verified_by,
-				verified_at,
-				license_confirmed,
-				external_url,
-				revision_of
-			)
-			values ($1, $2, $3, $4, $5, $6, $7, $8, 'pending_review', $9, null, null, $10, $11, $12)
-			returning id
-		`,
-		[
-			title,
-			description,
-			subject,
-			yearGroup,
-			curriculum,
-			level,
-			format,
-			typeRaw,
-			actor.id,
-			licenseConfirmed,
-			externalUrl ?? existingExternalUrl,
-			resourceId
-		]
-	);
-
-	const revisionId = String(result.rows[0].id);
-
-	if (hasExistingFile) {
-		await db.query(
-			`
-				insert into resource_files (
-					resource_id,
-					object_key,
-					original_filename,
-					mime_type,
-					size_bytes,
-					sha256
-				)
-				select
-					$2,
-					object_key,
-					original_filename,
-					mime_type,
-					size_bytes,
-					sha256
-				from resource_files
-				where resource_id = $1
-			`,
-			[resourceId, revisionId]
+				typeRaw,
+				actor.id,
+				licenseConfirmed,
+				externalUrl ?? existingExternalUrl,
+				resourceId
+			]
 		);
+
+		revisionId = String(result.rows[0].id);
+
+		if (hasExistingFile) {
+			const fileResult = await client.query(
+				`
+					select object_key, original_filename, mime_type, size_bytes, sha256
+					from resource_files
+					where resource_id = $1
+					limit 1
+				`,
+				[resourceId]
+			);
+
+			if (fileResult.rowCount === 1) {
+				const source = fileResult.rows[0];
+				const sourceKey = String(source.object_key);
+				const safeName =
+					String(source.original_filename).replace(/[^a-zA-Z0-9._-]/g, '_').slice(0, 160) || 'file';
+				const nextObjectKey = `${randomBytes(16).toString('hex')}-${safeName}`;
+				await mkdir(fileDir, { recursive: true });
+				await writeFile(join(fileDir, nextObjectKey), await readFile(join(fileDir, sourceKey)));
+				copiedObjectKey = nextObjectKey;
+
+				await client.query(
+					`
+						insert into resource_files (
+							resource_id,
+							object_key,
+							original_filename,
+							mime_type,
+							size_bytes,
+							sha256
+						)
+						values ($1, $2, $3, $4, $5, $6)
+					`,
+					[
+						revisionId,
+						nextObjectKey,
+						String(source.original_filename),
+						String(source.mime_type),
+						Number(source.size_bytes),
+						String(source.sha256)
+					]
+				);
+			}
+		}
+
+		await client.query('commit');
+	} catch (error) {
+		try {
+			await client.query('rollback');
+		} catch {
+			// ignore rollback failures
+		}
+		if (copiedObjectKey) await deleteStoredFile(copiedObjectKey);
+		throw error;
+	} finally {
+		client.release();
 	}
 
 	await writeAudit(actor.id, 'resource.revision.submit', 'resource', revisionId, {
@@ -943,39 +1039,57 @@ export async function listPendingResources() {
 export async function approveResource(id: string, moderator: User) {
 	if (!isModerator(moderator)) return { ok: false as const, reason: 'forbidden' };
 
-	const result = await db.query(
-		`
-			update resources
-			set status = 'verified',
-				verified_by = $2,
-				verified_at = now(),
-				rejected_by = null,
-				rejected_at = null,
-				rejection_reason = null,
-				updated_at = now()
-			where id = $1
-				and status = 'pending_review'
-				and deleted_at is null
-			returning id, revision_of
-		`,
-		[id, moderator.id]
-	);
-
-	if (result.rowCount !== 1) return { ok: false as const, reason: 'not_found' };
-
-	const revisionOf = result.rows[0].revision_of ? String(result.rows[0].revision_of) : null;
-	if (revisionOf) {
-		await db.query(
+	const client = await db.connect();
+	try {
+		await client.query('begin');
+		const result = await client.query(
 			`
 				update resources
-				set status = 'archived',
+				set status = 'verified',
+					verified_by = $2,
+					verified_at = now(),
+					rejected_by = null,
+					rejected_at = null,
+					rejection_reason = null,
 					updated_at = now()
 				where id = $1
-					and status = 'verified'
+					and status = 'pending_review'
 					and deleted_at is null
+				returning id, revision_of
 			`,
-			[revisionOf]
+			[id, moderator.id]
 		);
+
+		if (result.rowCount !== 1) {
+			await client.query('rollback');
+			return { ok: false as const, reason: 'not_found' };
+		}
+
+		const revisionOf = result.rows[0].revision_of ? String(result.rows[0].revision_of) : null;
+		if (revisionOf) {
+			await client.query(
+				`
+					update resources
+					set status = 'archived',
+						updated_at = now()
+					where id = $1
+						and status = 'verified'
+						and deleted_at is null
+				`,
+				[revisionOf]
+			);
+		}
+
+		await client.query('commit');
+	} catch (error) {
+		try {
+			await client.query('rollback');
+		} catch {
+			// ignore rollback failures
+		}
+		throw error;
+	} finally {
+		client.release();
 	}
 
 	await writeAudit(moderator.id, 'resource.approve', 'resource', id, {});
@@ -1038,8 +1152,12 @@ export async function getResourceFileForDownload(fileId: string, user: User | nu
 		isModerator(user);
 
 	if (!canDownload) return null;
-
-	const data = await readFile(join(fileDir, String(row.object_key)));
+	let data: Buffer;
+	try {
+		data = await readFile(join(fileDir, String(row.object_key)));
+	} catch {
+		return null;
+	}
 
 	return {
 		data,

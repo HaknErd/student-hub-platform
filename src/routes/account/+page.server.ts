@@ -1,6 +1,6 @@
 import { fail, redirect } from '@sveltejs/kit';
 import type { Actions, PageServerLoad } from './$types';
-import { changeUserPassword, updateUserSettings } from '$lib/server/auth';
+import { changeUserPassword, sanitizeUserSettings, updateUserSettings } from '$lib/server/auth';
 
 export const load: PageServerLoad = async ({ locals }) => {
 	if (!locals.user) {
@@ -17,13 +17,18 @@ export const actions: Actions = {
 		if (!locals.user) throw redirect(303, '/login');
 
 		const form = await request.formData();
-		const settings: Record<string, unknown> = {};
+		const rawSettings: Record<string, unknown> = {};
 
 		for (const [key, value] of form.entries()) {
 			if (key === 'type') continue;
 			if (typeof value === 'string') {
-				settings[key] = value;
+				rawSettings[key] = value;
 			}
+		}
+
+		const settings = sanitizeUserSettings(rawSettings);
+		if (!Object.keys(settings).length) {
+			return fail(400, { type: 'settings', message: 'Could not update settings.' });
 		}
 
 		const result = await updateUserSettings(locals.user.id, settings);

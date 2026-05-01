@@ -66,19 +66,6 @@
 		}
 	}
 
-	function handleBlur() {
-		setTimeout(() => {
-			if (!editing) return;
-
-			if (fieldValue.trim() !== value) {
-				const form = inputEl?.closest('form');
-				form?.requestSubmit();
-			} else {
-				cancelEdit();
-			}
-		}, 100);
-	}
-
 	$effect(() => {
 		if (!editing) fieldValue = value;
 	});
@@ -86,9 +73,9 @@
 
 {#if editing}
 	<div class="inline-edit-row editing">
-		<dt class="inline-edit-label">{label}</dt>
+		<span class="inline-edit-label">{label}</span>
 
-		<form method="POST" action={action} use:enhance={handleSubmit}>
+		<form method="POST" action={action} use:enhance={handleSubmit} class="inline-edit-form">
 			<input type="hidden" name="field" value={field} />
 			<input
 				bind:this={inputEl}
@@ -97,13 +84,17 @@
 				name="value"
 				bind:value={fieldValue}
 				onkeydown={handleKeydown}
-				onblur={handleBlur}
 			/>
-		</form>
 
-		{#if saving}
-			<span class="inline-edit-status">Saving...</span>
-		{/if}
+			<div class="inline-edit-actions">
+				<button type="submit" class="btn btn-sm" disabled={saving}>
+					{saving ? 'Saving...' : 'Save'}
+				</button>
+				<button type="button" class="btn-ghost btn-sm" onclick={cancelEdit} disabled={saving}>
+					Cancel
+				</button>
+			</div>
+		</form>
 
 		{#if error}
 			<span class="inline-edit-error">{error}</span>
@@ -111,7 +102,7 @@
 	</div>
 {:else}
 	<button type="button" class="inline-edit-row" onclick={startEdit}>
-		<dt class="inline-edit-label">{label}</dt>
-		<dd class="inline-edit-value">{value}</dd>
+		<span class="inline-edit-label">{label}</span>
+		<span class="inline-edit-value">{value}</span>
 	</button>
 {/if}
