@@ -545,7 +545,7 @@
 			TEXT_SAMPLE_MAIN_STEP_X,
 			TEXT_SAMPLE_MAIN_STEP_Y
 		);
-		const signatureText = signature?.trim().toUpperCase();
+		const signatureText = "WELCOME BACK " + signature?.trim().toUpperCase();
 		const signaturePoints =
 			signatureText && width >= 1024
 				? sampleText(
