@@ -23,7 +23,8 @@
 				<a href="/">Home</a>
 				<a href="/about">About</a>
 				{#if user}
-					<a href="/account">Account</a>
+					<a href={`/profile/${user.id}`}>Profile</a>
+					<a href="/account">Settings</a>
 				{/if}
 			</nav>
 
@@ -49,6 +50,7 @@
 						profilePictureUrl={user.profilePictureUrl}
 						accentColor={user.accentColor}
 						avatarBackgroundColor={user.avatarBackgroundColor}
+						avatarShape={user.avatarShape}
 						size="sm"
 					/>
 					<a class="auth-chip__value" href={`/profile/${user.id}`}>{user.displayName}</a>

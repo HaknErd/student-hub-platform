@@ -30,7 +30,7 @@
 	let imageFailed = $state(false);
 
 	const initials = $derived(`${firstName[0]}${lastName[0]}`);
-	const avatarUrl = $derived(!profilePictureUrl ? null : `/api/avatar/${userId}`);
+	const avatarUrl = $derived(!profilePictureUrl ? null : `/api/avatar/${userId}?v=${profilePictureUrl}`);
 
 	function onImageError() {
 		imageFailed = true;

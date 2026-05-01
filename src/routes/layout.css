@@ -348,13 +348,17 @@
 
 	/* ---- Buttons ---- */
 	.btn {
-		@apply mt-2 inline-flex items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-white;
+		@apply mt-2 inline-flex items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-white transition-colors h-10;
 		&:hover { @apply bg-primary-hover; }
 		&:disabled { @apply opacity-60 cursor-not-allowed; }
 	}
 
+	.btn-sm {
+		@apply px-3 text-xs h-8;
+	}
+
 	.btn-ghost {
-		@apply inline-flex items-center justify-center rounded-md border border-border bg-bg px-3 py-2 text-sm text-text-muted no-underline;
+		@apply inline-flex items-center justify-center rounded-md border border-border bg-bg px-4 text-sm text-text-muted no-underline transition-colors h-10;
 		&:hover { @apply bg-surface text-text; }
 	}
 
@@ -560,6 +564,32 @@
 			&:hover { @apply text-text bg-bg; }
 		}
 
+		.avatar-modal-menu {
+			@apply flex flex-col p-2;
+		}
+
+		.avatar-modal-menu-btn {
+			@apply flex items-center text-left gap-4 p-4 rounded-xl transition-colors cursor-pointer;
+			&:hover {
+				@apply bg-surface border border-border -m-[1px];
+				padding: calc(1rem - 1px);
+			}
+		}
+
+		.avatar-modal-menu-icon {
+			@apply flex items-center justify-center w-10 h-10 rounded-full bg-bg border border-border shrink-0 text-text-muted;
+			&.text-danger {
+				@apply text-danger border-danger-border bg-danger-surface;
+			}
+		}
+
+		.avatar-modal-menu-text {
+			@apply flex flex-col min-w-0;
+			h4 { @apply text-sm font-semibold text-text mb-0.5; }
+			p { @apply text-xs text-text-muted truncate; }
+			.text-danger h4 { @apply text-danger; }
+		}
+
 		.avatar-modal-upload {
 			@apply flex flex-col items-center justify-center p-10 cursor-pointer border-2 border-dashed border-border rounded-xl m-6 transition-colors;
 			&:hover {
@@ -678,9 +708,9 @@
 	.profile-actions-wrapper {
 		@apply flex items-center gap-2 mb-2 sm:mb-4;
 		.btn-ghost {
-			@apply bg-bg px-4 py-1.5 rounded-full text-sm font-semibold border-border shadow-sm text-text transition-colors;
+			@apply bg-bg px-4 rounded-full text-sm font-semibold border-border shadow-sm text-text transition-colors h-10;
 			&:hover {
-				@apply bg-border border-border text-text;
+				@apply bg-surface text-text;
 			}
 		}
 	}
@@ -881,4 +911,2023 @@
 		border: 1px solid var(--color-danger-border);
 		color: var(--color-danger);
 	}
+}
+
+/* ---- Profile UX cleanup overrides ---- */
+.profile-layout {
+	@apply max-w-4xl mx-auto;
+}
+
+.profile-banner-wrap {
+	@apply relative h-32 sm:h-48 w-full overflow-hidden bg-border;
+}
+
+.profile-banner,
+.profile-banner-img {
+	@apply h-full w-full object-cover;
+}
+
+.profile-banner-edit-btn {
+	@apply absolute bottom-3 right-3 rounded-full border border-white/20 bg-black/50 px-3 py-1.5 text-xs font-semibold text-white backdrop-blur transition-colors;
+}
+
+.profile-banner-edit-btn:hover {
+	@apply bg-black/70;
+}
+
+.profile-top-row {
+	@apply border-b border-border pb-4;
+}
+
+.profile-avatar-wrapper {
+	@apply -mt-12 sm:-mt-16 rounded-2xl border-4 border-surface bg-surface shadow-sm;
+}
+
+.profile-actions-wrapper {
+	@apply ml-auto flex items-center gap-2 self-start mt-3;
+}
+
+.profile-actions-wrapper .btn-ghost {
+	@apply mt-0 h-9 rounded-full px-4 text-xs;
+}
+
+.profile-actions-wrapper .icon-btn {
+	@apply w-9 px-0;
+}
+
+.profile-media-actions {
+	@apply flex flex-wrap gap-2;
+}
+
+.custom-color-control {
+	@apply inline-flex items-center gap-2 rounded-lg border border-border bg-surface p-1;
+}
+
+.custom-color-control input[type='color'] {
+	@apply h-8 w-8 cursor-pointer rounded-md border-0 bg-transparent p-0;
+}
+
+.custom-color-control .btn-ghost {
+	@apply h-8 mt-0;
+}
+
+/* ---- Reusable image editor ---- */
+.image-editor-backdrop {
+	@apply fixed inset-0 z-50 flex items-center justify-center p-4;
+}
+
+.image-editor-scrim {
+	@apply absolute inset-0 bg-black/70;
+}
+
+.image-editor-modal {
+	@apply relative z-10 w-full max-w-xl overflow-hidden rounded-2xl border border-border bg-surface shadow-2xl;
+}
+
+.image-editor-header {
+	@apply flex items-center justify-between border-b border-border px-6 py-4;
+}
+
+.image-editor-header h3 {
+	@apply text-base font-semibold text-text;
+}
+
+.image-editor-close {
+	@apply rounded-md p-1 text-xl leading-none text-text-muted;
+}
+
+.image-editor-close:hover {
+	@apply bg-bg text-text;
+}
+
+.image-editor-crop {
+	@apply flex min-h-72 items-center justify-center bg-black/30 p-6;
+}
+
+.image-editor-crop-area {
+	@apply max-w-full cursor-grab select-none overflow-hidden rounded-xl border border-white/15 bg-zinc-950 shadow-xl;
+	touch-action: none;
+}
+
+.image-editor-crop-area:active {
+	cursor: grabbing;
+}
+
+.image-editor-crop-area canvas {
+	@apply block max-w-full;
+}
+
+.image-editor-upload-empty {
+	@apply flex min-h-56 w-full flex-col items-center justify-center rounded-xl border-2 border-dashed border-border bg-bg p-8 text-center transition-colors;
+}
+
+.image-editor-upload-empty:hover {
+	@apply border-primary/40 bg-surface;
+}
+
+.image-editor-upload-empty span {
+	@apply text-sm font-semibold text-text;
+}
+
+.image-editor-upload-empty small {
+	@apply mt-1 text-xs text-text-muted;
+}
+
+.image-editor-controls {
+	@apply flex items-center gap-3 border-t border-border px-6 py-4;
+}
+
+.image-editor-slider {
+	@apply flex-1;
+}
+
+.image-editor-slider input {
+	@apply w-full accent-primary;
+}
+
+.image-editor-preview {
+	@apply border-t border-border px-6 py-4;
+}
+
+.image-editor-preview-label {
+	@apply mb-3 text-xs font-semibold uppercase text-text-muted;
+}
+
+.image-editor-preview-image {
+	@apply h-32 w-32 object-cover;
+}
+
+.image-editor-preview-image.is-banner {
+	@apply h-28 w-full rounded-xl;
+}
+
+.image-editor-shapes {
+	@apply mt-4 flex gap-2;
+}
+
+.image-editor-shape-btn {
+	@apply rounded-full border border-border bg-bg px-3 py-1.5 text-xs font-medium text-text-muted transition-colors;
+}
+
+.image-editor-shape-btn:hover,
+.image-editor-shape-btn.active {
+	@apply border-primary bg-primary text-white;
+}
+
+.image-editor-error {
+	@apply mx-6 mb-4 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700;
+}
+
+.image-editor-footer {
+	@apply flex flex-col gap-3 border-t border-border px-6 py-4 sm:flex-row sm:items-center sm:justify-between;
+}
+
+.image-editor-footer-left,
+.image-editor-footer-right {
+	@apply flex flex-wrap items-center gap-2;
+}
+
+.image-editor-footer .btn,
+.image-editor-footer .btn-ghost {
+	@apply mt-0;
+}
+
+.danger-text {
+	@apply text-danger;
+}
+
+/* Remove hover layout jitter from old modal/menu rules if still present */
+.avatar-modal-menu-btn:hover {
+	margin: 0 !important;
+	padding: 1rem !important;
+}
+
+/* ---- Profile UX cleanup overrides ---- */
+.profile-layout {
+	@apply max-w-4xl mx-auto;
+}
+
+.profile-banner-wrap {
+	@apply relative h-32 sm:h-48 w-full overflow-hidden bg-border;
+}
+
+.profile-banner,
+.profile-banner-img {
+	@apply h-full w-full object-cover;
+}
+
+.profile-banner-edit-btn {
+	@apply absolute bottom-3 right-3 rounded-full border border-white/20 bg-black/50 px-3 py-1.5 text-xs font-semibold text-white backdrop-blur transition-colors;
+}
+
+.profile-banner-edit-btn:hover {
+	@apply bg-black/70;
+}
+
+.profile-top-row {
+	@apply border-b border-border pb-4;
+}
+
+.profile-avatar-wrapper {
+	@apply -mt-12 sm:-mt-16 rounded-2xl border-4 border-surface bg-surface shadow-sm;
+}
+
+.profile-actions-wrapper {
+	@apply ml-auto flex items-center gap-2 self-start mt-3;
+}
+
+.profile-actions-wrapper .btn-ghost {
+	@apply mt-0 h-9 rounded-full px-4 text-xs;
+}
+
+.profile-actions-wrapper .icon-btn {
+	@apply w-9 px-0;
+}
+
+.profile-media-actions {
+	@apply flex flex-wrap gap-2;
+}
+
+.custom-color-control {
+	@apply inline-flex items-center gap-2 rounded-lg border border-border bg-surface p-1;
+}
+
+.custom-color-control input[type='color'] {
+	@apply h-8 w-8 cursor-pointer rounded-md border-0 bg-transparent p-0;
+}
+
+.custom-color-control .btn-ghost {
+	@apply h-8 mt-0;
+}
+
+/* ---- Reusable image editor ---- */
+.image-editor-backdrop {
+	@apply fixed inset-0 z-50 flex items-center justify-center p-4;
+}
+
+.image-editor-scrim {
+	@apply absolute inset-0 bg-black/70;
+}
+
+.image-editor-modal {
+	@apply relative z-10 w-full max-w-xl overflow-hidden rounded-2xl border border-border bg-surface shadow-2xl;
+}
+
+.image-editor-header {
+	@apply flex items-center justify-between border-b border-border px-6 py-4;
+}
+
+.image-editor-header h3 {
+	@apply text-base font-semibold text-text;
+}
+
+.image-editor-close {
+	@apply rounded-md p-1 text-xl leading-none text-text-muted;
+}
+
+.image-editor-close:hover {
+	@apply bg-bg text-text;
+}
+
+.image-editor-crop {
+	@apply flex min-h-72 items-center justify-center bg-black/30 p-6;
+}
+
+.image-editor-crop-area {
+	@apply max-w-full cursor-grab select-none overflow-hidden rounded-xl border border-white/15 bg-zinc-950 shadow-xl;
+	touch-action: none;
+}
+
+.image-editor-crop-area:active {
+	cursor: grabbing;
+}
+
+.image-editor-crop-area canvas {
+	@apply block max-w-full;
+}
+
+.image-editor-upload-empty {
+	@apply flex min-h-56 w-full flex-col items-center justify-center rounded-xl border-2 border-dashed border-border bg-bg p-8 text-center transition-colors;
+}
+
+.image-editor-upload-empty:hover {
+	@apply border-primary/40 bg-surface;
+}
+
+.image-editor-upload-empty span {
+	@apply text-sm font-semibold text-text;
+}
+
+.image-editor-upload-empty small {
+	@apply mt-1 text-xs text-text-muted;
+}
+
+.image-editor-controls {
+	@apply flex items-center gap-3 border-t border-border px-6 py-4;
+}
+
+.image-editor-slider {
+	@apply flex-1;
+}
+
+.image-editor-slider input {
+	@apply w-full accent-primary;
+}
+
+.image-editor-preview {
+	@apply border-t border-border px-6 py-4;
+}
+
+.image-editor-preview-label {
+	@apply mb-3 text-xs font-semibold uppercase text-text-muted;
+}
+
+.image-editor-preview-image {
+	@apply h-32 w-32 object-cover;
+}
+
+.image-editor-preview-image.is-banner {
+	@apply h-28 w-full rounded-xl;
+}
+
+.image-editor-shapes {
+	@apply mt-4 flex gap-2;
+}
+
+.image-editor-shape-btn {
+	@apply rounded-full border border-border bg-bg px-3 py-1.5 text-xs font-medium text-text-muted transition-colors;
+}
+
+.image-editor-shape-btn:hover,
+.image-editor-shape-btn.active {
+	@apply border-primary bg-primary text-white;
+}
+
+.image-editor-error {
+	@apply mx-6 mb-4 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700;
+}
+
+.image-editor-footer {
+	@apply flex flex-col gap-3 border-t border-border px-6 py-4 sm:flex-row sm:items-center sm:justify-between;
+}
+
+.image-editor-footer-left,
+.image-editor-footer-right {
+	@apply flex flex-wrap items-center gap-2;
+}
+
+.image-editor-footer .btn,
+.image-editor-footer .btn-ghost {
+	@apply mt-0;
+}
+
+.danger-text {
+	@apply text-danger;
+}
+
+/* Remove hover layout jitter from old modal/menu rules if still present */
+.avatar-modal-menu-btn:hover {
+	margin: 0 !important;
+	padding: 1rem !important;
+}
+
+/* ---- Clean profile layout: CSS handles overlap, no floating banner buttons ---- */
+.profile-layout {
+	max-width: 56rem;
+	margin-inline: auto;
+	overflow: hidden;
+}
+
+.profile-banner-wrap {
+	position: relative;
+	height: 12rem;
+	overflow: hidden;
+	border-bottom: 1px solid var(--color-border);
+}
+
+.profile-banner,
+.profile-banner-img {
+	display: block;
+	width: 100%;
+	height: 100%;
+	object-fit: cover;
+}
+
+.profile-banner-edit-btn {
+	display: none !important;
+}
+
+.profile-container {
+	position: relative;
+	padding: 0 1.5rem 1.5rem;
+}
+
+.profile-top-row {
+	display: flex;
+	align-items: flex-start;
+	justify-content: space-between;
+	gap: 1rem;
+	margin-top: -4rem;
+	margin-bottom: 1rem;
+	padding-bottom: 1rem;
+	border-bottom: 1px solid var(--color-border);
+}
+
+.profile-avatar-wrapper {
+	flex: 0 0 auto;
+	display: inline-block;
+	border: 4px solid var(--color-surface);
+	border-radius: 1rem;
+	background: var(--color-surface);
+	box-shadow: 0 10px 25px rgb(0 0 0 / 18%);
+}
+
+.profile-avatar-wrapper :global(.avatar),
+.profile-avatar-wrapper .avatar {
+	width: 8rem;
+	height: 8rem;
+	font-size: 2rem;
+}
+
+.profile-actions-wrapper {
+	display: flex;
+	align-items: center;
+	justify-content: flex-end;
+	gap: 0.5rem;
+	margin-top: 4.25rem;
+	margin-left: auto;
+}
+
+.profile-actions-wrapper .btn-ghost {
+	height: 2.25rem;
+	margin-top: 0;
+	border-radius: 9999px;
+	background: var(--color-bg);
+	padding-inline: 0.9rem;
+	font-size: 0.75rem;
+	font-weight: 700;
+	color: var(--color-text);
+}
+
+.profile-actions-wrapper .btn-ghost:hover {
+	background: var(--color-surface);
+}
+
+.profile-actions-wrapper .icon-btn {
+	width: 2.25rem;
+	padding-inline: 0;
+}
+
+.profile-actions-wrapper .icon-btn span {
+	display: block;
+	font-size: 0.9rem;
+	line-height: 1;
+}
+
+.profile-info {
+	margin-top: 0.25rem;
+}
+
+@media (max-width: 640px) {
+	.profile-banner-wrap {
+		height: 9rem;
+	}
+
+	.profile-container {
+		padding-inline: 1rem;
+	}
+
+	.profile-top-row {
+		margin-top: -3rem;
+	}
+
+	.profile-avatar-wrapper :global(.avatar),
+	.profile-avatar-wrapper .avatar {
+		width: 6rem;
+		height: 6rem;
+		font-size: 1.5rem;
+	}
+
+	.profile-actions-wrapper {
+		margin-top: 3.25rem;
+		flex-wrap: wrap;
+	}
+
+	.profile-actions-wrapper .btn-ghost {
+		padding-inline: 0.7rem;
+	}
+}
+
+/* ---- Profile alignment final: Twitter-style overlap and clickable banner ---- */
+.profile-layout {
+	max-width: 56rem;
+	margin-inline: auto;
+	overflow: hidden;
+	border-radius: 1rem;
+}
+
+.profile-banner-wrap {
+	position: relative;
+	display: block;
+	width: 100%;
+	height: 12rem;
+	padding: 0;
+	border: 0;
+	border-bottom: 1px solid var(--color-border);
+	background: transparent;
+	text-align: left;
+	overflow: hidden;
+	cursor: default;
+}
+
+.profile-banner-wrap:disabled {
+	cursor: default;
+}
+
+.profile-banner-wrap.editable-banner {
+	cursor: pointer;
+}
+
+.profile-banner,
+.profile-banner-img {
+	display: block;
+	width: 100%;
+	height: 100%;
+	object-fit: cover;
+}
+
+.profile-banner-overlay {
+	position: absolute;
+	right: 1rem;
+	bottom: 1rem;
+	border-radius: 9999px;
+	border: 1px solid rgb(255 255 255 / 20%);
+	background: rgb(0 0 0 / 55%);
+	padding: 0.45rem 0.8rem;
+	color: white;
+	font-size: 0.75rem;
+	font-weight: 700;
+	opacity: 0;
+	transform: translateY(0.25rem);
+	transition: opacity 140ms ease, transform 140ms ease, background-color 140ms ease;
+}
+
+.profile-banner-wrap.editable-banner:hover .profile-banner-overlay {
+	opacity: 1;
+	transform: translateY(0);
+}
+
+.profile-banner-wrap.editable-banner:hover .profile-banner-overlay:hover {
+	background: rgb(0 0 0 / 75%);
+}
+
+.profile-container {
+	position: relative;
+	padding: 0 1.5rem 1.5rem;
+}
+
+.profile-top-row {
+	display: flex;
+	align-items: flex-start;
+	justify-content: space-between;
+	gap: 1rem;
+	margin-top: -4rem;
+	margin-bottom: 0;
+	padding-bottom: 0;
+	border-bottom: 0;
+}
+
+.profile-avatar-wrapper {
+	position: relative;
+	z-index: 2;
+	flex: 0 0 auto;
+	display: inline-block;
+	border: 4px solid var(--color-surface);
+	border-radius: 1rem;
+	background: var(--color-surface);
+	box-shadow: 0 10px 25px rgb(0 0 0 / 18%);
+}
+
+.profile-avatar-wrapper :global(.avatar),
+.profile-avatar-wrapper .avatar {
+	width: 8rem;
+	height: 8rem;
+	font-size: 2rem;
+}
+
+.profile-actions-wrapper {
+	display: flex;
+	align-items: center;
+	justify-content: flex-end;
+	gap: 0.5rem;
+	margin-top: 4.65rem;
+	margin-left: auto;
+}
+
+.profile-actions-wrapper .btn-ghost {
+	height: 2.25rem;
+	margin-top: 0;
+	border-radius: 9999px;
+	background: var(--color-bg);
+	padding-inline: 0.9rem;
+	border-color: var(--color-border);
+	font-size: 0.75rem;
+	font-weight: 700;
+	color: var(--color-text);
+}
+
+.profile-actions-wrapper .btn-ghost:hover {
+	background: var(--color-surface);
+	color: var(--color-text);
+}
+
+.profile-actions-wrapper .icon-btn {
+	width: 2.25rem;
+	padding-inline: 0;
+}
+
+.profile-info {
+	margin-top: 1rem;
+	padding-top: 0;
+	border-top: 0;
+}
+
+.profile-name {
+	font-size: 1.5rem;
+	line-height: 2rem;
+	font-weight: 800;
+	letter-spacing: -0.02em;
+}
+
+.profile-role {
+	margin-top: 0.15rem;
+	font-size: 0.75rem;
+	line-height: 1rem;
+	font-weight: 600;
+	text-transform: uppercase;
+	color: var(--color-text-muted);
+}
+
+.profile-bio-text {
+	margin-top: 1rem;
+	max-width: 65ch;
+	font-size: 0.95rem;
+	line-height: 1.5rem;
+}
+
+@media (max-width: 640px) {
+	.profile-banner-wrap {
+		height: 9rem;
+	}
+
+	.profile-container {
+		padding-inline: 1rem;
+	}
+
+	.profile-top-row {
+		margin-top: -3rem;
+	}
+
+	.profile-avatar-wrapper :global(.avatar),
+	.profile-avatar-wrapper .avatar {
+		width: 6rem;
+		height: 6rem;
+		font-size: 1.5rem;
+	}
+
+	.profile-actions-wrapper {
+		margin-top: 3.4rem;
+		flex-wrap: wrap;
+	}
+
+	.profile-info {
+		margin-top: 0.75rem;
+	}
+}
+
+/* Avatar exactly 50% inside banner / 50% below banner */
+.profile-top-row {
+	margin-top: -4rem;
+	align-items: flex-start;
+}
+
+.profile-avatar-wrapper {
+	margin-top: 0;
+}
+
+.profile-actions-wrapper {
+	margin-top: 4.65rem;
+}
+
+/* 8rem avatar => half overlap = -4rem */
+.profile-avatar-wrapper :global(.avatar),
+.profile-avatar-wrapper .avatar {
+	width: 8rem;
+	height: 8rem;
+}
+
+/* Mobile: 6rem avatar => half overlap = -3rem */
+@media (max-width: 640px) {
+	.profile-top-row {
+		margin-top: -3rem;
+	}
+
+	.profile-actions-wrapper {
+		margin-top: 3.4rem;
+	}
+
+	.profile-avatar-wrapper :global(.avatar),
+	.profile-avatar-wrapper .avatar {
+		width: 6rem;
+		height: 6rem;
+	}
+}
+
+/* ---- Final profile avatar geometry: exact 50/50 banner overlap ---- */
+.profile-container {
+	position: relative;
+	padding: 0 1.5rem 1.5rem;
+}
+
+/* This row starts exactly after the banner. The avatar is translated up by 50%. */
+.profile-top-row {
+	position: relative;
+	display: flex;
+	align-items: flex-start;
+	justify-content: space-between;
+	gap: 1rem;
+
+	margin-top: 0 !important;
+	margin-bottom: 1rem;
+	padding-bottom: 1rem;
+	border-bottom: 1px solid var(--color-border);
+
+	min-height: 4.25rem;
+}
+
+/* 8rem avatar: translateY(-50%) = 4rem into banner, 4rem below banner */
+.profile-avatar-wrapper {
+	position: relative;
+	z-index: 2;
+	flex: 0 0 auto;
+
+	margin-top: 0 !important;
+	transform: translateY(-50%);
+
+	display: inline-block;
+	border: 4px solid var(--color-surface);
+	border-radius: 1rem;
+	background: var(--color-surface);
+	box-shadow: 0 10px 25px rgb(0 0 0 / 18%);
+}
+
+.profile-avatar-wrapper :global(.avatar),
+.profile-avatar-wrapper .avatar {
+	width: 8rem !important;
+	height: 8rem !important;
+	font-size: 2rem;
+}
+
+/* Buttons align with the lower half of the avatar, not the banner */
+.profile-actions-wrapper {
+	display: flex;
+	align-items: center;
+	justify-content: flex-end;
+	gap: 0.5rem;
+
+	margin-top: 1rem !important;
+	margin-left: auto;
+}
+
+.profile-actions-wrapper .btn-ghost {
+	height: 2.25rem;
+	margin-top: 0;
+	border-radius: 9999px;
+	background: var(--color-bg);
+	padding-inline: 0.9rem;
+	border-color: var(--color-border);
+	font-size: 0.75rem;
+	font-weight: 700;
+	color: var(--color-text);
+}
+
+.profile-actions-wrapper .icon-btn {
+	width: 2.25rem;
+	padding-inline: 0;
+}
+
+/* Name starts below the avatar row, not with a giant random gap */
+.profile-info {
+	margin-top: 0.5rem !important;
+	padding-top: 0 !important;
+	border-top: 0 !important;
+}
+
+.profile-edit-grid {
+	margin-top: 1rem !important;
+	padding-top: 1.5rem !important;
+}
+
+/* Mobile: 6rem avatar, exact 3rem/3rem split */
+@media (max-width: 640px) {
+	.profile-container {
+		padding-inline: 1rem;
+	}
+
+	.profile-top-row {
+		min-height: 3.25rem;
+	}
+
+	.profile-avatar-wrapper :global(.avatar),
+	.profile-avatar-wrapper .avatar {
+		width: 6rem !important;
+		height: 6rem !important;
+		font-size: 1.5rem;
+	}
+
+	.profile-actions-wrapper {
+		margin-top: 0.75rem !important;
+		flex-wrap: wrap;
+	}
+}
+
+/* ---- Remove dead space and pointless divider below avatar/actions ---- */
+.profile-top-row {
+	min-height: 0 !important;
+	margin-bottom: 0 !important;
+	padding-bottom: 0 !important;
+	border-bottom: 0 !important;
+}
+
+.profile-info {
+	margin-top: -3rem !important;
+	padding-top: 0 !important;
+	border-top: 0 !important;
+}
+
+.profile-edit-grid {
+	margin-top: -2.25rem !important;
+	padding-top: 0 !important;
+	border-top: 0 !important;
+}
+
+/* Keep actions aligned without forcing the whole row to become tall */
+.profile-actions-wrapper {
+	margin-top: 1rem !important;
+}
+
+/* ---- Fix avatar wrapper shape background/shadow when avatar is circular ---- */
+.profile-avatar-wrapper {
+	overflow: hidden;
+	background: transparent !important;
+}
+
+.profile-avatar-wrapper:has(.rounded-full) {
+	border-radius: 9999px !important;
+}
+
+.profile-avatar-wrapper:has(.rounded-xl) {
+	border-radius: 1rem !important;
+}
+
+/* The edit overlay must match avatar shape too */
+.avatar-editable.rounded-full,
+.avatar-editable.rounded-full .avatar-overlay {
+	border-radius: 9999px !important;
+}
+
+.avatar-editable.rounded-xl,
+.avatar-editable.rounded-xl .avatar-overlay {
+	border-radius: 1rem !important;
+}
+
+/* ---- Color picker: same height as swatches, pipette/dropper style overlay ---- */
+.color-picker-form {
+	align-items: center;
+}
+
+.color-swatch-md {
+	width: 2.5rem !important;
+	height: 2.5rem !important;
+	border-radius: 0.55rem;
+}
+
+.custom-color-control {
+	position: relative;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: 2.5rem !important;
+	height: 2.5rem !important;
+	padding: 0 !important;
+	border-radius: 0.55rem;
+	border: 2px solid var(--color-border);
+	background: var(--color-surface);
+	overflow: hidden;
+	cursor: pointer;
+}
+
+.custom-color-control:hover {
+	border-color: var(--color-primary);
+}
+
+.custom-color-control input[type='color'] {
+	position: absolute;
+	inset: 0;
+	width: 100% !important;
+	height: 100% !important;
+	border: 0;
+	padding: 0;
+	opacity: 1;
+	cursor: pointer;
+}
+
+.custom-color-control .btn-ghost {
+	position: absolute;
+	inset: 0;
+	width: 100%;
+	height: 100%;
+	margin: 0 !important;
+	padding: 0 !important;
+	border: 0;
+	border-radius: 0;
+	background: rgb(0 0 0 / 28%);
+	color: white;
+	font-size: 0;
+	pointer-events: none;
+}
+
+.custom-color-control .btn-ghost::before {
+	content: '⌁';
+	display: grid;
+	place-items: center;
+	width: 100%;
+	height: 100%;
+	font-size: 1.15rem;
+	font-weight: 800;
+	color: white;
+	text-shadow: 0 1px 2px rgb(0 0 0 / 60%);
+}
+
+/* Remove old "Custom" text width effects */
+.custom-color-control .btn-sm {
+	min-width: 0 !important;
+}
+
+@media (max-width: 640px) {
+	.profile-info {
+		margin-top: -2.25rem !important;
+	}
+
+	.profile-edit-grid {
+		margin-top: -1.75rem !important;
+	}
+}
+
+/* ---- Consistent avatar shapes everywhere ---- */
+.auth-chip .avatar.rounded-full,
+.search-result-item .avatar.rounded-full,
+.profile-avatar-wrapper .avatar.rounded-full {
+	border-radius: 9999px !important;
+}
+
+.auth-chip .avatar.rounded-xl,
+.search-result-item .avatar.rounded-xl,
+.profile-avatar-wrapper .avatar.rounded-xl {
+	border-radius: 0.75rem !important;
+}
+
+/* ---- Proper compact custom colour picker ---- */
+.color-picker-form {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 0.75rem;
+}
+
+.color-swatch-md,
+.custom-color-control {
+	width: 2.75rem !important;
+	height: 2.75rem !important;
+	min-width: 2.75rem !important;
+	min-height: 2.75rem !important;
+	border-radius: 0.75rem !important;
+	box-sizing: border-box;
+}
+
+.custom-color-control {
+	position: relative;
+	display: inline-grid;
+	place-items: center;
+	border: 2px solid var(--color-border);
+	overflow: hidden;
+	cursor: pointer;
+	box-shadow: inset 0 0 0 1px rgb(255 255 255 / 10%);
+}
+
+.custom-color-control:hover {
+	border-color: var(--color-primary);
+}
+
+/* actual color input covers the swatch, but is invisible */
+.custom-color-control input[type='color'] {
+	position: absolute;
+	inset: 0;
+	width: 100% !important;
+	height: 100% !important;
+	padding: 0;
+	border: 0;
+	opacity: 0;
+	cursor: pointer;
+}
+
+/* CSS-only pipette: diagonal body + tip + handle */
+.custom-color-control::before {
+	content: '';
+	position: absolute;
+	width: 1.25rem;
+	height: 0.28rem;
+	border-radius: 9999px;
+	background: white;
+	transform: rotate(45deg);
+	box-shadow: 0 1px 2px rgb(0 0 0 / 60%);
+}
+
+.custom-color-control::after {
+	content: '';
+	position: absolute;
+	width: 0.42rem;
+	height: 0.42rem;
+	border: 2px solid white;
+	border-radius: 9999px;
+	transform: translate(-0.42rem, -0.42rem) rotate(45deg);
+	box-shadow: 0 1px 2px rgb(0 0 0 / 60%);
+}
+
+/* kill old stretched button if browser still has cached markup/classes */
+.custom-color-control .btn-ghost,
+.custom-color-control .btn-sm {
+	display: none !important;
+}
+
+/* ---- Site-width consistency ---- */
+.profile-layout {
+	max-width: 72rem !important;
+	width: 100%;
+	margin-inline: auto;
+}
+
+.search-page {
+	max-width: 72rem;
+	margin-inline: auto;
+}
+
+/* ---- Search metadata, filter and pagination ---- */
+.search-page-header {
+	margin-bottom: 0;
+}
+
+.search-meta {
+	margin-top: 0.5rem;
+	text-transform: none !important;
+	letter-spacing: normal !important;
+	font-size: 0.875rem !important;
+	font-weight: 500 !important;
+	color: var(--color-text-muted);
+}
+
+.search-bar-with-filter {
+	display: grid;
+	grid-template-columns: minmax(0, 1fr) 10rem auto;
+	align-items: center;
+}
+
+.search-bar-with-filter select {
+	width: 100%;
+	height: 2.5rem;
+	border-radius: 0.375rem;
+	border: 1px solid var(--color-border);
+	background: var(--color-bg);
+	padding-inline: 0.75rem;
+	font-size: 0.875rem;
+	color: var(--color-text);
+	outline: none;
+}
+
+.search-bar-with-filter select:focus {
+	border-color: var(--color-primary);
+	box-shadow: 0 0 0 2px color-mix(in srgb, var(--color-primary) 25%, transparent);
+}
+
+.search-pagination {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	gap: 0.75rem;
+	margin-top: 1rem;
+}
+
+.search-pagination .btn-ghost {
+	height: 2.25rem;
+	margin-top: 0;
+	text-decoration: none;
+}
+
+.search-pagination-status {
+	font-size: 0.875rem;
+	color: var(--color-text-muted);
+}
+
+.disabled-link {
+	pointer-events: none;
+	opacity: 0.45;
+}
+
+@media (max-width: 640px) {
+	.search-bar-with-filter {
+		grid-template-columns: 1fr;
+	}
+
+	.search-pagination {
+		justify-content: space-between;
+	}
+}
+
+/* ---- Search result grouping ---- */
+.search-groups {
+	display: grid;
+	gap: 1.25rem;
+}
+
+.search-group {
+	display: grid;
+	gap: 0.75rem;
+}
+
+.search-group-header {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 1rem;
+}
+
+.search-group-header h2 {
+	font-size: 0.875rem;
+	font-weight: 800;
+	text-transform: uppercase;
+	letter-spacing: 0.08em;
+	color: var(--color-text-muted);
+}
+
+.search-group-header span {
+	border-radius: 9999px;
+	border: 1px solid var(--color-border);
+	background: var(--color-surface);
+	padding: 0.15rem 0.55rem;
+	font-size: 0.75rem;
+	font-weight: 700;
+	color: var(--color-text-muted);
+}
+
+.search-group-empty {
+	border: 1px solid var(--color-border);
+	border-radius: 0.75rem;
+	background: var(--color-surface);
+	padding: 1rem;
+	font-size: 0.875rem;
+	color: var(--color-text-muted);
+}
+
+/* ---- Consistent full-width app pages ---- */
+.page-container {
+	max-width: 72rem !important;
+	width: 100%;
+}
+
+.search-page,
+.profile-layout,
+.settings-page-v2 {
+	max-width: 72rem !important;
+	width: 100%;
+	margin-inline: auto;
+}
+
+/* ---- GitHub-like settings UI ---- */
+.settings-page-v2 {
+	display: grid;
+	gap: 1.5rem;
+}
+
+.settings-top {
+	display: flex;
+	align-items: end;
+	justify-content: space-between;
+	gap: 1rem;
+}
+
+.settings-top h1 {
+	margin-top: 0.25rem;
+	font-size: 1.875rem;
+	line-height: 2.25rem;
+	font-weight: 800;
+	letter-spacing: -0.03em;
+	color: var(--color-text);
+}
+
+.settings-eyebrow {
+	font-size: 0.75rem;
+	font-weight: 800;
+	text-transform: uppercase;
+	letter-spacing: 0.08em;
+	color: var(--color-text-muted);
+}
+
+.settings-top .btn-ghost {
+	margin-top: 0;
+	height: 2.25rem;
+	text-decoration: none;
+}
+
+.settings-shell {
+	display: grid;
+	grid-template-columns: 15rem minmax(0, 1fr);
+	gap: 2rem;
+	align-items: start;
+}
+
+.settings-sidebar {
+	position: sticky;
+	top: 5rem;
+	display: grid;
+	gap: 0.25rem;
+	border: 1px solid var(--color-border);
+	border-radius: 0.75rem;
+	background: var(--color-surface);
+	padding: 0.5rem;
+}
+
+.settings-sidebar-link {
+	display: flex;
+	align-items: center;
+	border-radius: 0.5rem;
+	padding: 0.65rem 0.75rem;
+	text-decoration: none;
+	font-size: 0.875rem;
+	font-weight: 650;
+	color: var(--color-text-muted);
+}
+
+.settings-sidebar-link:hover {
+	background: var(--color-bg);
+	color: var(--color-text);
+}
+
+.settings-sidebar-link.active {
+	background: var(--color-bg);
+	color: var(--color-text);
+}
+
+.settings-sidebar-link.danger {
+	color: var(--color-danger);
+}
+
+.settings-content {
+	display: grid;
+	gap: 1.5rem;
+	min-width: 0;
+}
+
+.settings-section {
+	border: 1px solid var(--color-border);
+	border-radius: 0.875rem;
+	background: var(--color-surface);
+	overflow: hidden;
+}
+
+.settings-section-heading {
+	border-bottom: 1px solid var(--color-border);
+	padding: 1.25rem 1.5rem;
+}
+
+.settings-section-heading h2 {
+	font-size: 1rem;
+	font-weight: 800;
+	color: var(--color-text);
+}
+
+.settings-section-heading p {
+	margin-top: 0.25rem;
+	font-size: 0.875rem;
+	color: var(--color-text-muted);
+}
+
+.settings-row {
+	display: grid;
+	grid-template-columns: minmax(0, 1fr) auto;
+	gap: 1.5rem;
+	align-items: center;
+	border-bottom: 1px solid var(--color-border);
+	padding: 1.25rem 1.5rem;
+}
+
+.settings-row:last-child {
+	border-bottom: 0;
+}
+
+.settings-row.stacked {
+	grid-template-columns: 1fr;
+	align-items: start;
+}
+
+.settings-row h3 {
+	font-size: 0.925rem;
+	font-weight: 750;
+	color: var(--color-text);
+}
+
+.settings-row p {
+	margin-top: 0.25rem;
+	max-width: 60ch;
+	font-size: 0.875rem;
+	color: var(--color-text-muted);
+}
+
+.settings-control {
+	display: grid;
+	gap: 0.35rem;
+	justify-items: end;
+	min-width: 14rem;
+}
+
+.settings-control select {
+	width: 14rem;
+	height: 2.4rem;
+	border-radius: 0.5rem;
+	border: 1px solid var(--color-border);
+	background: var(--color-bg);
+	padding-inline: 0.75rem;
+	font-size: 0.875rem;
+	color: var(--color-text);
+	outline: none;
+}
+
+.settings-control select:focus {
+	border-color: var(--color-primary);
+	box-shadow: 0 0 0 2px color-mix(in srgb, var(--color-primary) 25%, transparent);
+}
+
+.settings-status-muted,
+.settings-status-success {
+	font-size: 0.75rem;
+	font-weight: 650;
+}
+
+.settings-status-muted {
+	color: var(--color-text-muted);
+}
+
+.settings-status-success {
+	color: #16a34a;
+}
+
+.settings-switch {
+	display: inline-flex;
+	align-items: center;
+	gap: 0.5rem;
+	justify-content: flex-end;
+	font-size: 0.875rem;
+	color: var(--color-text-muted);
+	white-space: nowrap;
+}
+
+.settings-switch.inline {
+	justify-content: flex-start;
+}
+
+.settings-switch input {
+	width: 1rem;
+	height: 1rem;
+	border-radius: 0.25rem;
+	border-color: var(--color-border);
+	color: var(--color-primary);
+}
+
+.settings-security-form {
+	display: block;
+}
+
+.settings-form-grid {
+	display: grid;
+	gap: 1rem;
+	max-width: 34rem;
+}
+
+.settings-form-grid label:not(.settings-switch) {
+	display: grid;
+	gap: 0.4rem;
+}
+
+.settings-form-grid label > span {
+	font-size: 0.875rem;
+	font-weight: 650;
+	color: var(--color-text);
+}
+
+.settings-form-grid input[type='password'] {
+	width: 100%;
+	height: 2.5rem;
+	border-radius: 0.5rem;
+	border: 1px solid var(--color-border);
+	background: var(--color-bg);
+	padding-inline: 0.75rem;
+	color: var(--color-text);
+	outline: none;
+}
+
+.settings-form-grid input[type='password']:focus {
+	border-color: var(--color-primary);
+	box-shadow: 0 0 0 2px color-mix(in srgb, var(--color-primary) 25%, transparent);
+}
+
+.settings-danger-note {
+	border: 1px solid var(--color-danger-border);
+	border-radius: 0.65rem;
+	background: var(--color-danger-surface);
+	padding: 0.75rem;
+	color: var(--color-danger) !important;
+}
+
+.danger-section .settings-section-heading h2 {
+	color: var(--color-danger);
+}
+
+.danger-section {
+	border-color: var(--color-danger-border);
+}
+
+.settings-form-grid .btn {
+	margin-top: 0;
+	width: auto;
+	min-width: 10rem;
+}
+
+/* Search stays same main width and does not shrink oddly */
+.search-page {
+	display: grid;
+	gap: 1.5rem;
+}
+
+.search-bar-full,
+.search-results,
+.search-groups {
+	width: 100%;
+}
+
+.search-result-item {
+	width: 100%;
+}
+
+/* Mobile */
+@media (max-width: 800px) {
+	.settings-top {
+		align-items: start;
+		flex-direction: column;
+	}
+
+	.settings-shell {
+		grid-template-columns: 1fr;
+		gap: 1rem;
+	}
+
+	.settings-sidebar {
+		position: static;
+		display: flex;
+		overflow-x: auto;
+		white-space: nowrap;
+	}
+
+	.settings-sidebar-link {
+		flex: 0 0 auto;
+	}
+
+	.settings-row {
+		grid-template-columns: 1fr;
+		gap: 1rem;
+		align-items: start;
+	}
+
+	.settings-control {
+		justify-items: stretch;
+		width: 100%;
+		min-width: 0;
+	}
+
+	.settings-control select {
+		width: 100%;
+	}
+
+	.settings-switch {
+		justify-content: flex-start;
+	}
+
+	.settings-section-heading,
+	.settings-row {
+		padding-inline: 1rem;
+	}
+}
+
+/* ---- Header UX: Profile and Settings are explicit ---- */
+.site-nav a[href="/account"] {
+	font-weight: 650;
+}
+
+.auth-chip {
+	max-width: 18rem;
+}
+
+.auth-chip__value {
+	max-width: 11rem;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+/* Hide less important nav items first on small screens */
+@media (max-width: 760px) {
+	.site-nav a[href="/about"] {
+		display: none;
+	}
+
+	.header-search {
+		display: none !important;
+	}
+
+	.auth-chip__value {
+		max-width: 7rem;
+	}
+}
+
+@media (max-width: 560px) {
+	.site-nav {
+		display: none;
+	}
+
+	.auth-chip {
+		padding-inline: 0.5rem;
+	}
+
+	.auth-chip__action {
+		display: none;
+	}
+}
+
+/* ---- Fixed main content width; left rail uses spare left space ---- */
+:root {
+	--main-content-width: 72rem;
+	--left-rail-width: 14rem;
+	--left-rail-gap: 2rem;
+}
+
+.page-container {
+	max-width: var(--main-content-width) !important;
+	width: 100%;
+}
+
+.search-page,
+.settings-page-v2,
+.profile-layout {
+	max-width: var(--main-content-width) !important;
+	width: 100%;
+	margin-inline: auto;
+}
+
+/* Search: filters sit left of main content and do not shrink it */
+.search-page {
+	position: relative;
+	display: grid;
+	gap: 1.5rem;
+}
+
+.search-filter-rail {
+	position: absolute;
+	top: 8.25rem;
+	left: calc(-1 * (var(--left-rail-width) + var(--left-rail-gap)));
+	width: var(--left-rail-width);
+}
+
+.rail-card {
+	display: grid;
+	gap: 1rem;
+	border: 1px solid var(--color-border);
+	border-radius: 0.875rem;
+	background: var(--color-surface);
+	padding: 1rem;
+}
+
+.rail-card h2 {
+	font-size: 0.875rem;
+	font-weight: 800;
+	text-transform: uppercase;
+	letter-spacing: 0.08em;
+	color: var(--color-text-muted);
+}
+
+.rail-card label {
+	display: grid;
+	gap: 0.4rem;
+}
+
+.rail-card label span {
+	font-size: 0.8rem;
+	font-weight: 700;
+	color: var(--color-text);
+}
+
+.rail-card select {
+	height: 2.4rem;
+	width: 100%;
+	border-radius: 0.5rem;
+	border: 1px solid var(--color-border);
+	background: var(--color-bg);
+	padding-inline: 0.75rem;
+	font-size: 0.875rem;
+	color: var(--color-text);
+	outline: none;
+}
+
+.rail-card select:focus {
+	border-color: var(--color-primary);
+	box-shadow: 0 0 0 2px color-mix(in srgb, var(--color-primary) 25%, transparent);
+}
+
+.search-bar-main {
+	display: grid;
+	grid-template-columns: minmax(0, 1fr) auto;
+	align-items: center;
+	width: 100%;
+}
+
+.search-bar-main .btn {
+	margin-top: 0;
+}
+
+/* Settings: sections rail sits left of main content and does not shrink it */
+.settings-page-v2 {
+	position: relative;
+}
+
+.settings-shell {
+	display: block !important;
+	position: relative;
+}
+
+.settings-sidebar {
+	position: absolute !important;
+	top: 0;
+	left: calc(-1 * (var(--left-rail-width) + var(--left-rail-gap)));
+	width: var(--left-rail-width);
+	display: grid;
+	gap: 0.25rem;
+	border: 1px solid var(--color-border);
+	border-radius: 0.875rem;
+	background: var(--color-surface);
+	padding: 0.5rem;
+}
+
+.settings-content {
+	width: 100%;
+	display: grid;
+	gap: 1.5rem;
+	min-width: 0;
+}
+
+/* Undo old two-column settings grid */
+.settings-shell {
+	grid-template-columns: none !important;
+	gap: 0 !important;
+}
+
+/* Responsive: rail moves above content when no left spare space exists */
+@media (max-width: 1480px) {
+	.search-filter-rail,
+	.settings-sidebar {
+		position: static !important;
+		width: 100%;
+		margin-bottom: 1rem;
+	}
+
+	.settings-sidebar {
+		display: flex;
+		overflow-x: auto;
+		white-space: nowrap;
+	}
+
+	.settings-sidebar-link {
+		flex: 0 0 auto;
+	}
+
+	.search-filter-rail .rail-card {
+		grid-template-columns: auto minmax(12rem, 16rem);
+		align-items: center;
+	}
+
+	.search-filter-rail .rail-card h2 {
+		margin: 0;
+	}
+}
+
+@media (max-width: 640px) {
+	.search-bar-main {
+		grid-template-columns: 1fr;
+	}
+
+	.search-filter-rail .rail-card {
+		grid-template-columns: 1fr;
+	}
+
+	.search-filter-rail,
+	.settings-sidebar {
+		margin-bottom: 0.75rem;
+	}
+}
+
+/* ---- Explicit theme mode overrides: settings select now actually controls theme ---- */
+@layer base {
+	html[data-theme='light'] {
+		--color-primary: #2563eb;
+		--color-primary-hover: #1d4ed8;
+
+		--color-text: #0f172a;
+		--color-text-muted: #475569;
+
+		--color-bg: #ffffff;
+		--color-surface: #f8fafc;
+		--color-border: #e2e8f0;
+
+		--color-danger: #dc2626;
+		--color-danger-surface: #fef2f2;
+		--color-danger-border: #fecaca;
+		color-scheme: light;
+	}
+
+	html[data-theme='dark'] {
+		--color-primary: #60a5fa;
+		--color-primary-hover: #3b82f6;
+
+		--color-text: #e2e8f0;
+		--color-text-muted: #94a3b8;
+
+		--color-bg: #0b1220;
+		--color-surface: #0f172a;
+		--color-border: #1e293b;
+
+		--color-danger: #ef4444;
+		--color-danger-surface: #1c0e0e;
+		--color-danger-border: #3b1818;
+		color-scheme: dark;
+	}
+
+	html {
+		@apply bg-bg text-text;
+	}
+
+	body {
+		@apply bg-bg text-text;
+	}
+}
+
+/* ---- Tailwind-based form color cleanup for both themes ---- */
+@layer components {
+	input,
+	select,
+	textarea {
+		@apply border-border bg-bg text-text;
+	}
+
+	input::placeholder,
+	textarea::placeholder {
+		@apply text-text-muted;
+	}
+
+	.site-header,
+	.site-footer,
+	.settings-section,
+	.settings-sidebar,
+	.rail-card,
+	.profile-layout,
+	.search-result-item,
+	.search-group-empty {
+		@apply bg-surface border-border;
+	}
+
+	.btn-ghost,
+	.auth-login,
+	.auth-chip,
+	.header-search input {
+		@apply bg-bg border-border text-text-muted;
+	}
+
+	.btn-ghost:hover,
+	.auth-login:hover,
+	.header-search input:focus {
+		@apply bg-surface text-text;
+	}
+}
+
+/* ---- Image editor: shape format controls beside crop controls ---- */
+.image-editor-controls {
+	display: grid !important;
+	grid-template-columns: minmax(0, 1fr) auto;
+	gap: 1rem;
+	align-items: center;
+}
+
+.image-editor-zoom-row {
+	display: flex;
+	align-items: center;
+	gap: 0.75rem;
+	min-width: 0;
+}
+
+.image-editor-shape-row {
+	display: inline-flex;
+	align-items: center;
+	gap: 0.4rem;
+	white-space: nowrap;
+}
+
+.image-editor-shape-icon {
+	display: inline-grid;
+	place-items: center;
+	width: 2.25rem;
+	height: 2.25rem;
+	border: 1px solid var(--color-border);
+	border-radius: 0.55rem;
+	background: var(--color-bg);
+	color: var(--color-text-muted);
+	cursor: pointer;
+}
+
+.image-editor-shape-icon:hover {
+	background: var(--color-surface);
+	color: var(--color-text);
+}
+
+.image-editor-shape-icon.active {
+	border-color: var(--color-primary);
+	background: var(--color-primary);
+	color: white;
+}
+
+.shape-sample {
+	display: block;
+	width: 0.95rem;
+	height: 0.95rem;
+	background: currentColor;
+}
+
+.shape-sample.square {
+	border-radius: 0.2rem;
+}
+
+.shape-sample.circle {
+	border-radius: 9999px;
+}
+
+@media (max-width: 640px) {
+	.image-editor-controls {
+		grid-template-columns: 1fr !important;
+	}
+
+	.image-editor-shape-row {
+		justify-content: flex-start;
+	}
+}
+
+/* ---- Image editor UX: shape previews immediately in the crop viewport ---- */
+.image-editor-crop {
+	@apply bg-bg;
+}
+
+.image-editor-crop-area {
+	transition:
+		border-radius 140ms ease,
+		box-shadow 140ms ease,
+		border-color 140ms ease;
+}
+
+.image-editor-crop-area.avatar-crop {
+	width: 300px !important;
+	height: 300px !important;
+}
+
+.image-editor-crop-area.avatar-crop.shape-circle {
+	border-radius: 9999px !important;
+	overflow: hidden;
+}
+
+.image-editor-crop-area.avatar-crop.shape-rounded {
+	border-radius: 1rem !important;
+	overflow: hidden;
+}
+
+.image-editor-crop-area.banner-crop {
+	border-radius: 1rem !important;
+	overflow: hidden;
+}
+
+.image-editor-crop-area.avatar-crop.shape-circle canvas {
+	border-radius: 9999px !important;
+}
+
+.image-editor-crop-area.avatar-crop.shape-rounded canvas {
+	border-radius: 1rem !important;
+}
+
+.image-editor-crop-area.avatar-crop.shape-circle::after,
+.image-editor-crop-area.avatar-crop.shape-rounded::after {
+	content: '';
+	position: absolute;
+	inset: 0;
+	pointer-events: none;
+	border: 2px solid rgb(255 255 255 / 55%);
+	border-radius: inherit;
+}
+
+.image-editor-crop-area {
+	position: relative;
+}
+
+/* Cleaner controls: less cramped, obvious selected state */
+.image-editor-controls {
+	@apply border-t border-border bg-surface px-6 py-4;
+	grid-template-columns: minmax(0, 1fr) auto !important;
+}
+
+.image-editor-zoom-row {
+	@apply min-w-0;
+}
+
+.image-editor-shape-row {
+	@apply rounded-xl border border-border bg-bg p-1;
+}
+
+.image-editor-shape-row > span {
+	@apply sr-only;
+}
+
+.image-editor-shape-icon {
+	@apply h-10 w-10 rounded-lg border-0 bg-transparent;
+}
+
+.image-editor-shape-icon:hover {
+	@apply bg-surface;
+}
+
+.image-editor-shape-icon.active {
+	@apply bg-primary text-white;
+}
+
+.shape-sample.square {
+	border-radius: 0.25rem;
+}
+
+.shape-sample.circle {
+	border-radius: 9999px;
+}
+
+/* The lower footer should not compete visually with crop controls */
+.image-editor-footer {
+	@apply bg-surface;
+}
+
+@media (max-width: 640px) {
+	.image-editor-crop-area.avatar-crop {
+		width: min(300px, calc(100vw - 3rem)) !important;
+		height: min(300px, calc(100vw - 3rem)) !important;
+	}
+
+	.image-editor-controls {
+		grid-template-columns: 1fr !important;
+	}
+
+	.image-editor-shape-row {
+		width: max-content;
+	}
+}
+
+/* ---- Image editor: no duplicate preview area ---- */
+.image-editor-preview {
+	display: none !important;
+}
+
+/* Footer becomes the only confirmation/save area */
+.image-editor-footer {
+	border-top: 1px solid var(--color-border);
+}
+
+/* Since the crop viewport is now the live preview, make it visually final */
+.image-editor-crop-area.avatar-crop.shape-circle,
+.image-editor-crop-area.avatar-crop.shape-rounded {
+	box-shadow: 0 0 0 1px rgb(255 255 255 / 25%);
 }

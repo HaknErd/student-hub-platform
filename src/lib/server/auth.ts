@@ -19,11 +19,13 @@ const SESSION_IDLE_DAYS = 7;
 const LOGIN_WINDOW_MINUTES = 15;
 const MAX_FAILED_ATTEMPTS_PER_EMAIL_AND_IP = 5;
 const MAX_FAILED_ATTEMPTS_PER_IP = 20;
-const AVATAR_MAX_BYTES = 2_097_152;
+const AVATAR_MAX_BYTES = 4_194_304;
+const BANNER_MAX_BYTES = 4_194_304;
 const ALLOWED_AVATAR_TYPES = new Set(['image/png', 'image/jpeg', 'image/webp']);
 
 const projectRoot = dirname(dirname(dirname(fileURLToPath(import.meta.url))));
 const avatarsDir = join(projectRoot, 'data', 'avatars');
+const bannersDir = join(projectRoot, 'data', 'banners');
 
 function normalizeEmail(email: string) {
 	return email.trim().toLowerCase();
@@ -75,6 +77,7 @@ function mapUser(row: Record<string, unknown>): User {
 		displayName: String(row.display_name),
 		role: String(row.role),
 		profilePictureUrl: row.profile_picture_url ? String(row.profile_picture_url) : null,
+		bannerPictureUrl: row.banner_picture_url ? String(row.banner_picture_url) : null,
 		accentColor: row.accent_color ? String(row.accent_color) : null,
 		avatarBackgroundColor: row.avatar_background_color ? String(row.avatar_background_color) : null,
 		avatarShape: resolveAvatarShape(settings),
@@ -91,6 +94,7 @@ function mapProfile(row: Record<string, unknown>): PublicProfile {
 		displayName: String(row.display_name),
 		role: String(row.role),
 		profilePictureUrl: row.profile_picture_url ? String(row.profile_picture_url) : null,
+		bannerPictureUrl: row.banner_picture_url ? String(row.banner_picture_url) : null,
 		accentColor: row.accent_color ? String(row.accent_color) : null,
 		avatarBackgroundColor: row.avatar_background_color ? String(row.avatar_background_color) : null,
 		avatarShape: resolveAvatarShape(settings),
@@ -102,7 +106,7 @@ export async function getPublicProfile(id: string): Promise<PublicProfile | null
 	const result = await db.query(
 		`
 			select id, first_name, last_name, display_name, role,
-				profile_picture_url, accent_color, avatar_background_color, settings
+				profile_picture_url, banner_picture_url, accent_color, avatar_background_color, settings
 			from users
 			where id = $1
 				and disabled_at is null
@@ -140,7 +144,7 @@ export async function updateUserProfile(
 				where id = $1
 					and disabled_at is null
 				returning id, email, first_name, last_name, display_name, role,
-					profile_picture_url, accent_color, avatar_background_color, settings
+					profile_picture_url, banner_picture_url, accent_color, avatar_background_color, settings
 			`,
 			[userId, email, firstName, lastName, displayName]
 		);
@@ -164,7 +168,7 @@ export async function getUserFromSession(cookies: Cookies): Promise<User | null>
 	const result = await db.query(
 			`
 				select u.id, u.email, u.first_name, u.last_name, u.display_name, u.role,
-					u.profile_picture_url, u.accent_color, u.avatar_background_color, u.settings
+					u.profile_picture_url, u.banner_picture_url, u.accent_color, u.avatar_background_color, u.settings
 			from sessions s
 			join users u on u.id = s.user_id
 			where s.token_hash = $1
@@ -261,7 +265,7 @@ export async function loginWithPassword(event: RequestEvent, email: string, pass
 	const result = await db.query(
 			`
 				select id, email, first_name, last_name, display_name, role,
-					profile_picture_url, accent_color, avatar_background_color, settings,
+					profile_picture_url, banner_picture_url, accent_color, avatar_background_color, settings,
 					password_hash, disabled_at
 			from users
 			where email = $1
@@ -378,7 +382,7 @@ export async function saveAvatar(
 	userId: string,
 	fileBuffer: Buffer,
 	mimeType: string
-): Promise<{ ok: true } | { ok: false; reason: 'invalid_type' | 'too_large' | 'not_found' }> {
+): Promise<{ ok: true; filename: string } | { ok: false; reason: 'invalid_type' | 'too_large' | 'not_found' }> {
 	if (!ALLOWED_AVATAR_TYPES.has(mimeType)) {
 		return { ok: false, reason: 'invalid_type' };
 	}
@@ -417,7 +421,7 @@ export async function saveAvatar(
 		[userId, filename, hash]
 	);
 
-	return { ok: true };
+	return { ok: true, filename };
 }
 
 export async function removeAvatar(
@@ -446,6 +450,107 @@ export async function removeAvatar(
 
 	return { ok: true };
 }
+
+export async function readBannerFile(userId: string): Promise<{ data: Buffer; mimeType: string; hash: string } | null> {
+	const result = await db.query(
+		'select banner_picture_url, banner_picture_hash from users where id = $1 and disabled_at is null',
+		[userId]
+	);
+
+	if (result.rowCount !== 1 || !result.rows[0].banner_picture_url) return null;
+
+	const filename = String(result.rows[0].banner_picture_url);
+	const filepath = join(bannersDir, filename);
+
+	try {
+		const data = await readFile(filepath);
+		const ext = filename.split('.').pop()?.toLowerCase();
+		const mimeTypes: Record<string, string> = {
+			png: 'image/png',
+			jpg: 'image/jpeg',
+			jpeg: 'image/jpeg',
+			webp: 'image/webp'
+		};
+
+		return {
+			data,
+			mimeType: mimeTypes[ext ?? ''] ?? 'image/webp',
+			hash: result.rows[0].banner_picture_hash ? String(result.rows[0].banner_picture_hash) : ''
+		};
+	} catch {
+		return null;
+	}
+}
+
+export async function saveBanner(
+	userId: string,
+	fileBuffer: Buffer,
+	mimeType: string
+): Promise<{ ok: true; filename: string } | { ok: false; reason: 'invalid_type' | 'too_large' | 'not_found' }> {
+	if (!ALLOWED_AVATAR_TYPES.has(mimeType)) return { ok: false, reason: 'invalid_type' };
+	if (fileBuffer.byteLength > BANNER_MAX_BYTES) return { ok: false, reason: 'too_large' };
+
+	const existing = await db.query(
+		'select banner_picture_url from users where id = $1 and disabled_at is null',
+		[userId]
+	);
+
+	if (existing.rowCount !== 1) return { ok: false, reason: 'not_found' };
+
+	if (existing.rows[0].banner_picture_url) {
+		try {
+			await unlink(join(bannersDir, String(existing.rows[0].banner_picture_url)));
+		} catch {
+			// old file may already be gone
+		}
+	}
+
+	await mkdir(bannersDir, { recursive: true });
+
+	const ext = mimeType === 'image/png' ? 'png' : mimeType === 'image/webp' ? 'webp' : 'jpg';
+	const filename = `${randomBytes(16).toString('hex')}.${ext}`;
+	const filepath = join(bannersDir, filename);
+
+	await writeFile(filepath, fileBuffer);
+
+	const hash = createHash('sha256').update(fileBuffer).digest('hex');
+
+	await db.query(
+		`update users set banner_picture_url = $2, banner_picture_hash = $3, updated_at = now()
+		 where id = $1 and disabled_at is null`,
+		[userId, filename, hash]
+	);
+
+	return { ok: true, filename };
+}
+
+export async function removeBanner(
+	userId: string
+): Promise<{ ok: true } | { ok: false; reason: 'not_found' }> {
+	const existing = await db.query(
+		'select banner_picture_url from users where id = $1 and disabled_at is null',
+		[userId]
+	);
+
+	if (existing.rowCount !== 1) return { ok: false, reason: 'not_found' };
+
+	if (existing.rows[0].banner_picture_url) {
+		try {
+			await unlink(join(bannersDir, String(existing.rows[0].banner_picture_url)));
+		} catch {
+			// file already gone
+		}
+	}
+
+	await db.query(
+		`update users set banner_picture_url = null, banner_picture_hash = null, updated_at = now()
+		 where id = $1 and disabled_at is null`,
+		[userId]
+	);
+
+	return { ok: true };
+}
+
 
 export async function updateUserColors(
 	userId: string,
@@ -493,6 +598,7 @@ export type SearchResult = {
 	profilePictureUrl: string | null;
 	accentColor: string | null;
 	avatarBackgroundColor: string | null;
+	avatarShape: 'rounded-xl' | 'rounded-full';
 	similarity: number;
 };
 
@@ -522,7 +628,7 @@ export async function searchProfiles(query: string, limit = 20): Promise<SearchR
 		`
 			select
 				id, first_name, last_name, display_name, role,
-				profile_picture_url, accent_color, avatar_background_color,
+				profile_picture_url, accent_color, avatar_background_color, settings,
 				greatest(
 					similarity(first_name, $${terms.length + 1}),
 					similarity(last_name, $${terms.length + 1}),
@@ -544,8 +650,114 @@ export async function searchProfiles(query: string, limit = 20): Promise<SearchR
 		displayName: String(row.display_name),
 		role: String(row.role),
 		profilePictureUrl: row.profile_picture_url ? String(row.profile_picture_url) : null,
+		bannerPictureUrl: row.banner_picture_url ? String(row.banner_picture_url) : null,
 		accentColor: row.accent_color ? String(row.accent_color) : null,
 		avatarBackgroundColor: row.avatar_background_color ? String(row.avatar_background_color) : null,
+		avatarShape: resolveAvatarShape((row.settings as Record<string, unknown>) ?? {}),
 		similarity: Number(row.similarity)
 	}));
+}
+
+export type SearchProfilesPage = {
+	results: SearchResult[];
+	total: number;
+	limit: number;
+	offset: number;
+};
+
+export async function searchProfilesPaged(
+	query: string,
+	limit = 10,
+	offset = 0
+): Promise<SearchProfilesPage> {
+	const normalized = query.trim();
+	const safeLimit = Math.min(Math.max(limit, 1), 50);
+	const safeOffset = Math.max(offset, 0);
+
+	if (!normalized) {
+		return {
+			results: [],
+			total: 0,
+			limit: safeLimit,
+			offset: safeOffset
+		};
+	}
+
+	const likeQuery = `%${normalized}%`;
+
+	const whereSql = `
+		disabled_at is null
+		and (
+			first_name ilike $1
+			or last_name ilike $1
+			or display_name ilike $1
+			or email::text ilike $1
+			or similarity(first_name, $2) > 0.15
+			or similarity(last_name, $2) > 0.15
+			or similarity(display_name, $2) > 0.15
+			or similarity(email::text, $2) > 0.15
+		)
+	`;
+
+	const [countResult, result] = await Promise.all([
+		db.query(
+			`
+				select count(*)::int as total
+				from users
+				where ${whereSql}
+			`,
+			[likeQuery, normalized]
+		),
+		db.query(
+			`
+				select
+					id,
+					first_name,
+					last_name,
+					display_name,
+					role,
+					profile_picture_url,
+					accent_color,
+					avatar_background_color,
+					settings,
+					greatest(
+						similarity(first_name, $2),
+						similarity(last_name, $2),
+						similarity(display_name, $2),
+						similarity(email::text, $2)
+					) as similarity
+				from users
+				where ${whereSql}
+				order by
+					case
+						when display_name ilike $1 then 0
+						when email::text ilike $1 then 1
+						else 2
+					end,
+					similarity desc,
+					display_name asc
+				limit $3
+				offset $4
+			`,
+			[likeQuery, normalized, safeLimit, safeOffset]
+		)
+	]);
+
+	return {
+		total: Number(countResult.rows[0]?.total ?? 0),
+		limit: safeLimit,
+		offset: safeOffset,
+		results: result.rows.map((row) => ({
+			id: String(row.id),
+			firstName: String(row.first_name),
+			lastName: String(row.last_name),
+			displayName: String(row.display_name),
+			role: String(row.role),
+			profilePictureUrl: row.profile_picture_url ? String(row.profile_picture_url) : null,
+			accentColor: row.accent_color ? String(row.accent_color) : null,
+			avatarBackgroundColor: row.avatar_background_color ? String(row.avatar_background_color) : null,
+			avatarShape: resolveAvatarShape((row.settings as Record<string, unknown>) ?? {}),
+			similarity: Number(row.similarity)
+		}))
+	};
 }

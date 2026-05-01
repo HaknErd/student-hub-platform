@@ -7,28 +7,25 @@
 		field: string;
 		action: string;
 		type?: 'text' | 'email';
-		autofocus?: boolean;
 	};
 
-	let {
-		label,
-		value,
-		field,
-		action,
-		type = 'text',
-		autofocus = false
-	}: Props = $props();
+	let { label, value, field, action, type = 'text' }: Props = $props();
 
 	let editing = $state(false);
-	let fieldValue = $state(value);
+	let fieldValue = $state('');
 	let saving = $state(false);
 	let error = $state('');
-	let inputEl = $state<HTMLInputElement | undefined>(undefined);
+	let inputEl = $state<HTMLInputElement | undefined>();
 
 	function startEdit() {
 		editing = true;
 		fieldValue = value;
 		error = '';
+
+		requestAnimationFrame(() => {
+			inputEl?.focus();
+			inputEl?.select();
+		});
 	}
 
 	function cancelEdit() {
@@ -40,23 +37,31 @@
 	function handleSubmit() {
 		saving = true;
 		error = '';
+
 		return ({ result, update }: any) => {
 			saving = false;
+
 			if (result.type === 'failure') {
 				error = result.data?.error ?? 'Failed to save.';
-			} else if (result.type === 'success') {
+				return;
+			}
+
+			if (result.type === 'success') {
 				editing = false;
 				update();
 			}
 		};
 	}
 
-	function handleKeydown(e: KeyboardEvent) {
-		if (e.key === 'Escape') {
+	function handleKeydown(event: KeyboardEvent) {
+		if (event.key === 'Escape') {
 			cancelEdit();
-		} else if (e.key === 'Enter') {
-			e.preventDefault();
-			const form = (e.target as HTMLElement).closest('form') as HTMLFormElement | null;
+			return;
+		}
+
+		if (event.key === 'Enter') {
+			event.preventDefault();
+			const form = (event.currentTarget as HTMLElement).closest('form');
 			form?.requestSubmit();
 		}
 	}
@@ -64,36 +69,42 @@
 	function handleBlur() {
 		setTimeout(() => {
 			if (!editing) return;
-			if (fieldValue !== value) {
-				const form = inputEl?.closest('form') as HTMLFormElement | null;
+
+			if (fieldValue.trim() !== value) {
+				const form = inputEl?.closest('form');
 				form?.requestSubmit();
 			} else {
 				cancelEdit();
 			}
-		}, 150);
+		}, 100);
 	}
+
+	$effect(() => {
+		if (!editing) fieldValue = value;
+	});
 </script>
 
 {#if editing}
 	<div class="inline-edit-row editing">
 		<dt class="inline-edit-label">{label}</dt>
+
 		<form method="POST" action={action} use:enhance={handleSubmit}>
 			<input type="hidden" name="field" value={field} />
-			<!-- svelte-ignore a11y_autofocus -->
 			<input
+				bind:this={inputEl}
 				class="inline-edit-input"
 				type={type}
 				name="value"
 				bind:value={fieldValue}
 				onkeydown={handleKeydown}
 				onblur={handleBlur}
-				bind:this={inputEl}
-				{autofocus}
 			/>
 		</form>
+
 		{#if saving}
 			<span class="inline-edit-status">Saving...</span>
 		{/if}
+
 		{#if error}
 			<span class="inline-edit-error">{error}</span>
 		{/if}

@@ -10,7 +10,9 @@ const ALLOWED_API_PATHS = new Set<string>(['/api/auth/login', '/api/auth/logout'
 export const handle: Handle = async ({ event, resolve }) => {
 	const pathname = event.url.pathname;
 
-	if (pathname.startsWith('/api/') && !ALLOWED_API_PATHS.has(pathname) && !pathname.startsWith('/api/avatar/')) {
+	if (pathname.startsWith('/api/') && !ALLOWED_API_PATHS.has(pathname) && !((pathname.startsWith('/api/avatar/') ||
+		pathname.startsWith('/api/banner/') || pathname.startsWith('/api/banner/')) ||
+		pathname.startsWith('/api/banner/') || pathname.startsWith('/api/banner/'))) {
 		return new Response('Not found', { status: 404 });
 	}
 
@@ -18,7 +20,9 @@ export const handle: Handle = async ({ event, resolve }) => {
 	if (
 		pathname.startsWith('/_app/') ||
 		ALLOWED_API_PATHS.has(pathname) ||
-		pathname.startsWith('/api/avatar/') ||
+		((pathname.startsWith('/api/avatar/') ||
+		pathname.startsWith('/api/banner/') || pathname.startsWith('/api/banner/')) ||
+		pathname.startsWith('/api/banner/') || pathname.startsWith('/api/banner/')) ||
 		pathname === '/favicon.svg' ||
 		pathname === '/robots.txt'
 	) {

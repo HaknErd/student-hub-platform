@@ -11,6 +11,7 @@ export type User = {
 	accentColor: string | null;
 	avatarBackgroundColor: string | null;
 	avatarShape: AvatarShape;
+	bannerPictureUrl: string | null;
 	settings: Record<string, unknown>;
 };
 
@@ -24,5 +25,6 @@ export type PublicProfile = {
 	accentColor: string | null;
 	avatarBackgroundColor: string | null;
 	avatarShape: AvatarShape;
+	bannerPictureUrl: string | null;
 	settings: Record<string, unknown>;
 };

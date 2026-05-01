@@ -5,6 +5,8 @@ import {
 	updateUserProfile,
 	saveAvatar,
 	removeAvatar,
+	saveBanner,
+	removeBanner,
 	updateUserColors,
 	updateUserSettings
 } from '$lib/server/auth';
@@ -123,8 +125,7 @@ export const actions: Actions = {
 			await updateUserSettings(locals.user.id, { avatarShape });
 		}
 
-		locals.user = { ...locals.user, profilePictureUrl: params.id };
-		return { avatarUpdated: true };
+		return { avatarUpdated: true, newFilename: result.filename };
 	},
 
 	updateAvatarShape: async ({ request, locals, params }) => {
@@ -143,6 +144,38 @@ export const actions: Actions = {
 		}
 		
 		return { avatarShape: value };
+	},
+
+
+	updateBanner: async ({ request, locals, params }) => {
+		if (!locals.user || locals.user.id !== params.id) throw redirect(303, '/login');
+
+		const form = await request.formData();
+		const remove = form.get('remove');
+
+		if (remove === '1') {
+			const result = await removeBanner(locals.user.id);
+			if (!result.ok) return fail(400, { error: 'Could not remove banner.' });
+			return { bannerRemoved: true };
+		}
+
+		const file = form.get('banner');
+		if (!(file instanceof File) || !file.size) {
+			return fail(400, { error: 'Select an image to upload.' });
+		}
+
+		const buffer = Buffer.from(await file.arrayBuffer());
+		const result = await saveBanner(locals.user.id, buffer, file.type);
+
+		if (!result.ok) {
+			const messages: Record<string, string> = {
+				invalid_type: 'Use a PNG, JPEG, or WebP image.',
+				too_large: 'Image must be under 4 MB.'
+			};
+			return fail(400, { error: messages[result.reason] ?? 'Could not upload banner.' });
+		}
+
+		return { bannerUpdated: true, newFilename: result.filename };
 	},
 
 	updateSettings: async ({ request, locals, params }) => {
