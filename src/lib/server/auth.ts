@@ -93,6 +93,7 @@ function mapUser(row: Record<string, unknown>): User {
 		displayName: String(row.display_name),
 		role: String(row.role),
 		profilePictureUrl: row.profile_picture_url ? String(row.profile_picture_url) : null,
+		profilePictureHash: row.profile_picture_hash ? String(row.profile_picture_hash) : null,
 		bannerPictureUrl: row.banner_picture_url ? String(row.banner_picture_url) : null,
 		accentColor: row.accent_color ? String(row.accent_color) : null,
 		avatarBackgroundColor: row.avatar_background_color ? String(row.avatar_background_color) : null,
@@ -110,7 +111,9 @@ function mapProfile(row: Record<string, unknown>): PublicProfile {
 		displayName: String(row.display_name),
 		role: String(row.role),
 		profilePictureUrl: row.profile_picture_url ? String(row.profile_picture_url) : null,
+		profilePictureHash: row.profile_picture_hash ? String(row.profile_picture_hash) : null,
 		bannerPictureUrl: row.banner_picture_url ? String(row.banner_picture_url) : null,
+		bannerPictureHash: row.banner_picture_hash ? String(row.banner_picture_hash) : null,
 		accentColor: row.accent_color ? String(row.accent_color) : null,
 		avatarBackgroundColor: row.avatar_background_color ? String(row.avatar_background_color) : null,
 		avatarShape: resolveAvatarShape(settings),
@@ -122,7 +125,7 @@ export async function getPublicProfile(id: string): Promise<PublicProfile | null
 	const result = await db.query(
 		`
 			select id, first_name, last_name, display_name, role,
-				profile_picture_url, banner_picture_url, accent_color, avatar_background_color, settings
+				profile_picture_url, profile_picture_hash, banner_picture_url, banner_picture_hash, accent_color, avatar_background_color, settings
 			from users
 			where id = $1
 				and disabled_at is null
@@ -200,7 +203,7 @@ export async function updateUserProfile(
 				where id = $1
 					and disabled_at is null
 				returning id, email, first_name, last_name, display_name, role,
-					profile_picture_url, banner_picture_url, accent_color, avatar_background_color, settings
+					profile_picture_url, profile_picture_hash, banner_picture_url, banner_picture_hash, accent_color, avatar_background_color, settings
 			`,
 			[userId, email, firstName, lastName, displayName]
 		);
@@ -227,7 +230,7 @@ export async function getUserFromSession(cookies: Cookies): Promise<User | null>
 	const result = await db.query(
 			`
 				select u.id, u.email, u.first_name, u.last_name, u.display_name, u.role,
-					u.profile_picture_url, u.banner_picture_url, u.accent_color, u.avatar_background_color, u.settings
+					u.profile_picture_url, u.profile_picture_hash, u.banner_picture_url, u.banner_picture_hash, u.accent_color, u.avatar_background_color, u.settings
 			from sessions s
 			join users u on u.id = s.user_id
 			where s.token_hash = $1
@@ -327,7 +330,7 @@ export async function loginWithPassword(event: RequestEvent, email: string, pass
 	const result = await db.query(
 			`
 				select id, email, first_name, last_name, display_name, role,
-					profile_picture_url, banner_picture_url, accent_color, avatar_background_color, settings,
+					profile_picture_url, profile_picture_hash, banner_picture_url, banner_picture_hash, accent_color, avatar_background_color, settings,
 					password_hash, disabled_at
 			from users
 			where email = $1

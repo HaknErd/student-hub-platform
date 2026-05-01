@@ -16,7 +16,7 @@ export const GET: RequestHandler = async ({ params, request }) => {
 			status: 304,
 			headers: {
 				'ETag': etag,
-				'Cache-Control': 'private, max-age=3600'
+				'Cache-Control': 'public, max-age=31536000, immutable'
 			}
 		});
 	}
@@ -28,7 +28,7 @@ export const GET: RequestHandler = async ({ params, request }) => {
 		headers: {
 			'Content-Type': avatar.mimeType,
 			'ETag': etag,
-			'Cache-Control': 'private, max-age=3600'
+			'Cache-Control': 'public, max-age=31536000, immutable'
 		}
 	});
 };

@@ -16,7 +16,7 @@ export const GET: RequestHandler = async ({ params, request }) => {
 			status: 304,
 			headers: {
 				ETag: etag,
-				'Cache-Control': 'private, max-age=3600'
+				'Cache-Control': 'public, max-age=31536000, immutable'
 			}
 		});
 	}
@@ -27,8 +27,8 @@ export const GET: RequestHandler = async ({ params, request }) => {
 	return new Response(arrayBuffer, {
 		headers: {
 			'Content-Type': banner.mimeType,
-			ETag: etag,
-			'Cache-Control': 'private, max-age=3600'
+			'ETag': etag,
+			'Cache-Control': 'public, max-age=31536000, immutable'
 		}
 	});
 };

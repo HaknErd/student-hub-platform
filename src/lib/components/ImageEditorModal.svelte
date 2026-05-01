@@ -34,7 +34,7 @@
 
 	const CROP_WIDTH = $derived(kind === 'banner' ? 420 : 300);
 	const CROP_HEIGHT = $derived(Math.round(CROP_WIDTH / aspectRatio));
-	const MIN_ZOOM = 0.25;
+	const MIN_ZOOM = 0.05;
 	const MAX_ZOOM = 4;
 
 	let canvas = $state<HTMLCanvasElement>();

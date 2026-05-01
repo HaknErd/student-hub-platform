@@ -27,8 +27,10 @@
 	let roleSaving = $state(false);
 	let roleError = $state('');
 
-	let profileImageUrl = $derived(data.profile.profilePictureUrl ? `/api/avatar/${data.profile.id}?v=${data.profile.profilePictureUrl}` : null);
-	let bannerImageUrl = $derived(data.profile.bannerPictureUrl ? `/api/banner/${data.profile.id}?v=${data.profile.bannerPictureUrl}` : null);
+	let profileVersion = $derived(data.profile.profilePictureHash || data.profile.profilePictureUrl);
+	let bannerVersion = $derived(data.profile.bannerPictureHash || data.profile.bannerPictureUrl);
+	let profileImageUrl = $derived(data.profile.profilePictureUrl ? `/api/avatar/${data.profile.id}?v=${profileVersion}` : null);
+	let bannerImageUrl = $derived(data.profile.bannerPictureUrl ? `/api/banner/${data.profile.id}?v=${bannerVersion}` : null);
 
 	$effect(() => {
 		bioValue = String(data.profile.settings?.bio || '');

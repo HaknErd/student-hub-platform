@@ -1,0 +1,21 @@
+services:
+  app:
+    image: student-hub:latest
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: postgres://student_hub:student_hub@pg16-alpine:5432/student_hub
+      ORIGIN: https://student.hknx.de
+      BODY_SIZE_LIMIT: 12582912
+    volumes:
+      - student_hub_data:/app/data
+    ports:
+      - "127.0.0.1:3007:3000"
+    networks:
+      - pg-shared
+
+volumes:
+  student_hub_data:
+
+networks:
+  pg-shared:
+    external: true

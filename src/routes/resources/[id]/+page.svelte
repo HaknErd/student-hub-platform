@@ -74,6 +74,34 @@
 	const humanize = (value: string) => value.replaceAll('_', ' ');
 	const showStatus = $derived(data.canModerate || resource.status !== 'verified');
 	const ownerEditsVerifiedResource = $derived(!data.canModerate && resource.status === 'verified');
+
+	const file = $derived(resource.file);
+	const filePreviewType = $derived(
+		file
+			? file.mimeType === 'application/pdf'
+				? 'pdf'
+				: file.mimeType.startsWith('image/')
+					? 'image'
+					: file.mimeType === 'text/plain'
+						? 'text'
+						: null
+			: null
+	);
+	const previewUrl = $derived(file ? `/resources/file/${file.id}/preview` : null);
+	let textPreviewContent = $state('');
+	let textPreviewLoading = $state(false);
+
+	async function loadTextPreview() {
+		if (!previewUrl || filePreviewType !== 'text') return;
+		textPreviewLoading = true;
+		const res = await fetch(previewUrl);
+		textPreviewContent = await res.text();
+		textPreviewLoading = false;
+	}
+
+	$effect(() => {
+		if (filePreviewType === 'text') loadTextPreview();
+	});
 </script>
 
 <section class="resource-detail">
@@ -248,6 +276,33 @@
 			<h2>Overview</h2>
 			<p>{resource.description || 'No description provided.'}</p>
 		</section>
+
+		{#if filePreviewType && file}
+			<section class="resource-detail-section">
+				<h2>Preview</h2>
+				<div class="resource-preview-area">
+					{#if filePreviewType === 'pdf'}
+						<iframe
+							class="resource-preview-iframe"
+							src={previewUrl!}
+							title="Document preview"
+						></iframe>
+					{:else if filePreviewType === 'image'}
+						<img
+							class="resource-preview-image"
+							src={previewUrl!}
+							alt={file.originalFilename}
+						/>
+					{:else if filePreviewType === 'text'}
+						{#if textPreviewLoading}
+							<p class="text-text-muted">Loading preview…</p>
+						{:else}
+							<pre class="resource-preview-text">{textPreviewContent}</pre>
+						{/if}
+					{/if}
+				</div>
+			</section>
+		{/if}
 
 		<div class="resource-detail-facts">
 			<div>

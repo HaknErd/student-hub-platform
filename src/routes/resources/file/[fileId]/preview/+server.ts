@@ -1,6 +1,5 @@
 import { error, redirect, type RequestHandler } from '@sveltejs/kit';
 import { getResourceFileForDownload } from '$lib/server/resources';
-import { isSafeDownloadFilename } from '$lib/server/upload-types';
 
 export const GET: RequestHandler = async ({ params, locals }) => {
 	if (!locals.user) throw redirect(303, '/login');
@@ -13,7 +12,7 @@ export const GET: RequestHandler = async ({ params, locals }) => {
 	return new Response(new Uint8Array(file.data), {
 		headers: {
 			'Content-Type': file.mimeType,
-			'Content-Disposition': `attachment; filename="${isSafeDownloadFilename(file.filename)}"`,
+			'Content-Disposition': 'inline',
 			'Cache-Control': 'public, max-age=31536000, immutable'
 		}
 	});
