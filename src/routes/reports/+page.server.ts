@@ -16,7 +16,17 @@ export const actions: Actions = {
 		const form = await event.request.formData();
 		const result = await submitReport(event.locals.user, form);
 
-		if (!result.ok) return fail(400, { error: 'Enter a category and message.' });
+		if (!result.ok) {
+			return fail(
+				result.reason === 'rate_limited' ? 429 : 400,
+				{
+					error:
+						result.reason === 'rate_limited'
+							? 'Please wait before submitting another report.'
+							: 'Enter a category and message.'
+				}
+			);
+		}
 
 		return { success: true };
 	}

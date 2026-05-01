@@ -91,6 +91,13 @@ create table if not exists audit_log (
 	created_at timestamptz not null default now()
 );
 
+create table if not exists action_rate_limits (
+	id bigserial primary key,
+	action text not null,
+	user_id uuid not null references users(id) on delete cascade,
+	created_at timestamptz not null default now()
+);
+
 create index if not exists resources_status_idx on resources(status);
 create index if not exists resources_subject_idx on resources(subject);
 create index if not exists resources_type_idx on resources(type);
@@ -99,3 +106,4 @@ create index if not exists resource_files_resource_id_idx on resource_files(reso
 create index if not exists feedback_items_status_idx on feedback_items(status);
 create index if not exists reports_status_idx on reports(status);
 create index if not exists audit_log_target_idx on audit_log(target_type, target_id);
+create index if not exists action_rate_limits_lookup_idx on action_rate_limits(action, user_id, created_at desc);

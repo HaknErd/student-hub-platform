@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
+	import type { SubmitFunction } from '@sveltejs/kit';
 
 	type Props = {
 		label: string;
@@ -34,11 +35,11 @@
 		error = '';
 	}
 
-	function handleSubmit() {
+	const handleSubmit: SubmitFunction = () => {
 		saving = true;
 		error = '';
 
-		return ({ result, update }: any) => {
+		return async ({ result, update }) => {
 			saving = false;
 
 			if (result.type === 'failure') {
@@ -48,10 +49,10 @@
 
 			if (result.type === 'success') {
 				editing = false;
-				update();
+				await update();
 			}
 		};
-	}
+	};
 
 	function handleKeydown(event: KeyboardEvent) {
 		if (event.key === 'Escape') {

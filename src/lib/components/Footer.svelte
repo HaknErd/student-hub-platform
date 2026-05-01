@@ -1,6 +1,6 @@
 <script lang="ts">
-	import Email from "$lib/components/Email.svelte";
-	import {CONTACT} from "$lib/config";
+	import Email from '$lib/components/Email.svelte';
+	import { CONTACT } from '$lib/config';
 	import type { User } from '$lib/auth';
 
 	type Props = {

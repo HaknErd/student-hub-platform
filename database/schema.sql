@@ -16,7 +16,7 @@ create table if not exists users (
 	constraint users_email_not_blank check (length(trim(email::text)) > 0),
 	constraint users_display_name_not_blank check (length(trim(display_name)) > 0),
 	constraint users_role_not_blank check (length(trim(role)) > 0),
-	constraint users_role_valid check (role in ('student', 'prefect', 'admin'))
+	constraint users_role_valid check (role in ('student', 'prefect', 'teacher', 'admin'))
 );
 
 alter table users
@@ -72,14 +72,23 @@ create table if not exists login_attempts (
 	created_at timestamptz not null default now()
 );
 
+create table if not exists action_rate_limits (
+	id bigserial primary key,
+	action text not null,
+	user_id uuid not null references users(id) on delete cascade,
+	created_at timestamptz not null default now()
+);
+
 alter table users
 	drop constraint if exists users_role_valid;
 
 alter table users
-	add constraint users_role_valid check (role in ('student', 'prefect', 'admin'));
+	add constraint users_role_valid check (role in ('student', 'prefect', 'teacher', 'admin'));
 
 create index if not exists login_attempts_lookup_idx
 	on login_attempts(email, ip_address, created_at desc);
+create index if not exists action_rate_limits_lookup_idx
+	on action_rate_limits(action, user_id, created_at desc);
 
 alter table users
 	add column if not exists profile_picture_url text,

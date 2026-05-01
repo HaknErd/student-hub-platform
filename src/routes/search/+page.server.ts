@@ -1,4 +1,5 @@
 import type { PageServerLoad } from './$types';
+import { redirect } from '@sveltejs/kit';
 import { searchProfilesPaged } from '$lib/server/auth';
 import { countResources, listResources } from '$lib/server/resources';
 
@@ -6,6 +7,7 @@ const PAGE_SIZE = 10;
 const VALID_TYPES = new Set(['any', 'users', 'content']);
 
 export const load: PageServerLoad = async ({ url, locals }) => {
+	if (!locals.user) throw redirect(303, '/login');
 	const q = url.searchParams.get('q') ?? '';
 	const rawType = url.searchParams.get('type') ?? 'any';
 	const type = VALID_TYPES.has(rawType) ? rawType : 'any';

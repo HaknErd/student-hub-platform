@@ -1,5 +1,6 @@
 import { fail, redirect } from '@sveltejs/kit';
 import type { Actions, PageServerLoad } from './$types';
+import type { ReportItem } from '$lib/server/resources';
 import {
 	isModerator,
 	listReportsForModeration,
@@ -7,12 +8,47 @@ import {
 } from '$lib/server/resources';
 import { isTrustedPost } from '$lib/server/request';
 
-export const load: PageServerLoad = async ({ locals }) => {
+function matchesQuery(item: ReportItem, query: string) {
+	if (!query) return true;
+
+	const haystack = [
+		item.category,
+		item.message,
+		item.status,
+		item.createdBy?.displayName ?? '',
+		item.createdBy?.email ?? ''
+	]
+		.join(' ')
+		.toLowerCase();
+
+	return haystack.includes(query);
+}
+
+export const load: PageServerLoad = async ({ locals, url }) => {
 	if (!locals.user) throw redirect(303, '/login');
 	if (!isModerator(locals.user)) throw redirect(303, '/');
 
+	const q = url.searchParams.get('q')?.trim().toLowerCase() ?? '';
+	const status = url.searchParams.get('status')?.trim() ?? 'any';
+	const visibility = url.searchParams.get('visibility')?.trim() ?? 'any';
+
+	const reportItems = await listReportsForModeration(locals.user, true);
+
+	const filteredReportItems = reportItems.filter((item) => {
+		if (status !== 'any' && item.status !== status) return false;
+		if (visibility === 'anonymous' && item.createdBy !== null) return false;
+		if (visibility === 'identified' && item.createdBy === null) return false;
+		return matchesQuery(item, q);
+	});
+
 	return {
-		reports: await listReportsForModeration(locals.user, true)
+		reports: filteredReportItems,
+		totalReports: reportItems.length,
+		filters: {
+			q,
+			status,
+			visibility
+		}
 	};
 };
 

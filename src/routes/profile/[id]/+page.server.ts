@@ -134,15 +134,16 @@ export const actions: Actions = {
 		}
 
 		const buffer = Buffer.from(await file.arrayBuffer());
-		const result = await saveAvatar(locals.user.id, buffer, file.type);
+			const result = await saveAvatar(locals.user.id, buffer, file.type);
 
-		if (!result.ok) {
-			const messages: Record<string, string> = {
-				invalid_type: 'Use a PNG, JPEG, or WebP image.',
-				too_large: 'Image must be under 2 MB.'
-			};
-			return fail(400, { error: messages[result.reason] ?? 'Could not upload.' });
-		}
+			if (!result.ok) {
+				const messages: Record<string, string> = {
+					invalid_type: 'Use a PNG, JPEG, or WebP image.',
+					too_large: 'Image must be under 4 MB.',
+					rate_limited: 'Please wait before uploading another profile picture.'
+				};
+				return fail(400, { error: messages[result.reason] ?? 'Could not upload.' });
+			}
 
 		if (avatarShape === 'rounded-xl' || avatarShape === 'rounded-full') {
 			await updateUserSettings(locals.user.id, { avatarShape });
@@ -199,7 +200,8 @@ export const actions: Actions = {
 		if (!result.ok) {
 			const messages: Record<string, string> = {
 				invalid_type: 'Use a PNG, JPEG, or WebP image.',
-				too_large: 'Image must be under 4 MB.'
+				too_large: 'Image must be under 4 MB.',
+				rate_limited: 'Please wait before uploading another banner image.'
 			};
 			return fail(400, { error: messages[result.reason] ?? 'Could not upload banner.' });
 		}

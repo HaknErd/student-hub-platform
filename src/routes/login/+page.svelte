@@ -15,10 +15,12 @@
 				body: JSON.stringify({ email, password })
 			});
 
-			if (!response.ok) {
-				error = 'Invalid email or password.';
-				return;
-			}
+		if (!response.ok) {
+			error = response.status === 429
+				? 'Too many login attempts. Try again later.'
+				: 'Invalid email or password.';
+			return;
+		}
 
 			location.href = '/';
 		} finally {
@@ -42,6 +44,6 @@
 		{#if error}
 			<p class="form-error">{error}</p>
 		{/if}
-		<button type="submit" disabled={busy}>{busy ? 'Signing in...' : 'Sign in'}</button>
+		<button class="btn" type="submit" disabled={busy}>{busy ? 'Signing in...' : 'Sign in'}</button>
 	</form>
 </section>

@@ -1,6 +1,6 @@
 import { redirect } from '@sveltejs/kit';
 import type { PageServerLoad } from './$types';
-import { listResources } from '$lib/server/resources';
+import { countResources, listResources } from '$lib/server/resources';
 
 export const load: PageServerLoad = async ({ locals, url }) => {
 	if (!locals.user) throw redirect(303, '/login');
@@ -12,20 +12,33 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 	const type = url.searchParams.get('type') ?? '';
 	const format = url.searchParams.get('format') ?? '';
 	const formatGroup = url.searchParams.get('formatGroup') ?? '';
+	const page = Math.max(Number(url.searchParams.get('page')) || 1, 1);
+	const limit = 20;
+	const offset = (page - 1) * limit;
 
-	const resources = await listResources({
+	const filters = {
 		query: q,
 		subject,
 		curriculum,
 		level,
 		type,
 		format,
-		formatGroup,
-		limit: 50
-	});
+		formatGroup
+	};
+
+	const [resources, total] = await Promise.all([
+		listResources({ ...filters, limit, offset }),
+		countResources(filters)
+	]);
+
+	const totalPages = Math.max(1, Math.ceil(total / limit));
 
 	return {
 		resources,
+		total,
+		page,
+		limit,
+		totalPages,
 		query: q,
 		subject,
 		curriculum,

@@ -140,7 +140,7 @@
 						<input
 							name="compactMode"
 							type="checkbox"
-							checked={String(settings.compactMode) === 'true'}
+							checked={settings.compactMode === true || settings.compactMode === 'true'}
 							onchange={handleCompactModeChange}
 						/>
 						<span>Enabled</span>

@@ -126,7 +126,9 @@
 				aria-label={`Update ${kind} status`}
 				onchange={(event) => event.currentTarget.form?.requestSubmit()}
 			>
-			<option value="submitted">Submitted</option>
+			{#if currentStatus === 'submitted'}
+			<option value="submitted" disabled>Submitted</option>
+			{/if}
 			<option value="triaged">Triaged</option>
 
 			{#if kind === 'report'}

@@ -3,8 +3,11 @@ import { mkdir, readFile, unlink, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import type { RequestEvent } from '@sveltejs/kit';
 import type { User } from '$lib/auth';
+import { writeAudit } from '$lib/server/audit';
 import { getAppSettings } from '$lib/server/app-settings';
 import { db } from '$lib/server/db';
+import { enforceUserActionRateLimit } from '$lib/server/rate-limit';
+import { detectUploadSignature, isSafeDownloadFilename } from '$lib/server/upload-types';
 
 const FILE_MAX_BYTES = 10 * 1024 * 1024;
 const ALLOWED_FILE_TYPES = new Set([
@@ -25,7 +28,8 @@ const ALLOWED_FILE_TYPES = new Set([
 	'image/webp'
 ]);
 
-const fileDir = join(process.cwd(), 'data', 'resource-files');
+const storageRoot = process.env.STORAGE_DIR ?? join(process.cwd(), 'data');
+const fileDir = join(storageRoot, 'resource-files');
 type Queryable = {
 	query: (text: string, values?: unknown[]) => Promise<{ rowCount: number | null; rows: Record<string, unknown>[] }>;
 };
@@ -530,7 +534,7 @@ export async function createResourceSubmission(event: RequestEvent, user: User) 
 	if (externalUrl) {
 		try {
 			const url = new URL(externalUrl);
-			if (url.protocol !== 'https:' && url.protocol !== 'http:') {
+			if (url.protocol !== 'https:') {
 				return { ok: false as const, reason: 'invalid_url' };
 			}
 		} catch {
@@ -548,6 +552,10 @@ export async function createResourceSubmission(event: RequestEvent, user: User) 
 
 	if (!externalUrl && !hasFile) {
 		return { ok: false as const, reason: 'missing_content' };
+	}
+
+	if (!(await enforceUserActionRateLimit('resource.create', user.id, 5, 60))) {
+		return { ok: false as const, reason: 'rate_limited' };
 	}
 
 	const appSettings = await getAppSettings();
@@ -602,6 +610,10 @@ export async function createResourceSubmission(event: RequestEvent, user: User) 
 
 		if (preparedFile && !('ok' in preparedFile)) {
 			const upload = await saveResourceFile(client, resourceId, preparedFile);
+			if (!upload.ok) {
+				await client.query('rollback');
+				return upload;
+			}
 			storedObjectKey = upload.objectKey;
 		}
 
@@ -624,6 +636,24 @@ export async function createResourceSubmission(event: RequestEvent, user: User) 
 }
 
 async function saveResourceFile(queryable: Queryable, resourceId: string, file: PreparedResourceFile) {
+	const detected = detectUploadSignature(file.buffer);
+	const accepted =
+		(file.mimeType === 'application/pdf' && detected === 'pdf') ||
+		(file.mimeType === 'text/plain' && (detected === 'text' || detected === 'rtf')) ||
+		(file.mimeType === 'application/rtf' && detected === 'rtf') ||
+		((file.mimeType === 'image/png' || file.mimeType === 'image/jpeg' || file.mimeType === 'image/webp') &&
+			detected === file.mimeType.split('/')[1]) ||
+		(file.mimeType.startsWith('application/vnd.') &&
+			(file.mimeType.includes('openxmlformats') || file.mimeType.includes('oasis.opendocument')) &&
+			detected === 'zip') ||
+		(file.mimeType === 'application/msword' && detected === 'ole') ||
+		(file.mimeType === 'application/vnd.ms-powerpoint' && detected === 'ole') ||
+		(file.mimeType === 'application/vnd.ms-excel' && detected === 'ole');
+
+	if (!accepted) {
+		return { ok: false as const, reason: 'invalid_file_type' };
+	}
+
 	await mkdir(fileDir, { recursive: true });
 	await writeFile(join(fileDir, file.objectKey), file.buffer);
 
@@ -681,7 +711,7 @@ export async function updateResourceByModerator(event: RequestEvent, moderator: 
 	if (externalUrl) {
 		try {
 			const url = new URL(externalUrl);
-			if (url.protocol !== 'https:' && url.protocol !== 'http:') {
+			if (url.protocol !== 'https:') {
 				return { ok: false as const, reason: 'invalid_url' };
 			}
 		} catch {
@@ -788,7 +818,7 @@ export async function updateOwnSubmission(event: RequestEvent, actor: User, reso
 	if (externalUrl) {
 		try {
 			const url = new URL(externalUrl);
-			if (url.protocol !== 'https:' && url.protocol !== 'http:') {
+			if (url.protocol !== 'https:') {
 				return { ok: false as const, reason: 'invalid_url' };
 			}
 		} catch {
@@ -897,7 +927,7 @@ export async function submitResourceRevision(event: RequestEvent, actor: User, r
 	if (externalUrl) {
 		try {
 			const url = new URL(externalUrl);
-			if (url.protocol !== 'https:' && url.protocol !== 'http:') {
+			if (url.protocol !== 'https:') {
 				return { ok: false as const, reason: 'invalid_url' };
 			}
 		} catch {
@@ -1161,7 +1191,7 @@ export async function getResourceFileForDownload(fileId: string, user: User | nu
 
 	return {
 		data,
-		filename: String(row.original_filename),
+		filename: isSafeDownloadFilename(String(row.original_filename)),
 		mimeType: String(row.mime_type)
 	};
 }
@@ -1172,6 +1202,10 @@ export async function submitFeedback(user: User, form: FormData) {
 	const anonymous = form.get('anonymousToPrefects') === 'on';
 
 	if (!category || !message) return { ok: false as const, reason: 'invalid_input' };
+
+	if (!(await enforceUserActionRateLimit('feedback.submit', user.id, 5, 60))) {
+		return { ok: false as const, reason: 'rate_limited' };
+	}
 
 	const result = await db.query(
 		`
@@ -1193,6 +1227,10 @@ export async function submitReport(user: User, form: FormData) {
 	const anonymous = form.get('anonymousToPrefects') !== null;
 
 	if (!category || !message) return { ok: false as const, reason: 'invalid_input' };
+
+	if (!(await enforceUserActionRateLimit('report.submit', user.id, 5, 60))) {
+		return { ok: false as const, reason: 'rate_limited' };
+	}
 
 	const result = await db.query(
 		`
@@ -1318,7 +1356,7 @@ export async function updateReportStatus(
 ) {
 	if (!isModerator(actor)) return { ok: false as const, reason: 'forbidden' };
 
-	if (status === 'escalated' && !isModerator(actor)) {
+	if (status === 'escalated' && !isTeacherOrAdmin(actor)) {
 		return { ok: false as const, reason: 'forbidden' };
 	}
 
@@ -1336,20 +1374,4 @@ export async function updateReportStatus(
 	if (result.rowCount !== 1) return { ok: false as const, reason: 'not_found' };
 	await writeAudit(actor.id, `report.${status}`, 'report', id, {});
 	return { ok: true as const };
-}
-
-async function writeAudit(
-	actorId: string | null,
-	action: string,
-	targetType: string,
-	targetId: string | null,
-	meta: Record<string, unknown>
-) {
-	await db.query(
-		`
-			insert into audit_log (actor_id, action, target_type, target_id, meta)
-			values ($1, $2, $3, $4, $5::jsonb)
-		`,
-		[actorId, action, targetType, targetId, JSON.stringify(meta)]
-	);
 }

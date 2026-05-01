@@ -249,8 +249,8 @@
 			}
 
 			await onsave(blob, shape);
-		} catch {
-			error = 'Could not save image.';
+		} catch (caught) {
+			error = caught instanceof Error && caught.message ? caught.message : 'Could not save image.';
 		} finally {
 			saving = false;
 		}
@@ -267,8 +267,8 @@
 		try {
 			await onremove?.();
 			onclose();
-		} catch {
-			error = 'Could not remove image.';
+		} catch (caught) {
+			error = caught instanceof Error && caught.message ? caught.message : 'Could not remove image.';
 		} finally {
 			saving = false;
 		}

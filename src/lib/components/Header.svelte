@@ -9,8 +9,8 @@
 	let { user = null }: Props = $props();
 
 	async function logout() {
-		await fetch('/api/auth/logout', { method: 'POST' });
-		location.href = '/';
+		const res = await fetch('/api/auth/logout', { method: 'POST' });
+		if (res.ok) location.href = '/';
 	}
 </script>
 

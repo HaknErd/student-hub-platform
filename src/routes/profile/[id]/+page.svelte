@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
 	import { invalidateAll } from '$app/navigation';
+	import type { SubmitFunction } from '@sveltejs/kit';
 	import Avatar from '$lib/components/Avatar.svelte';
 	import AvatarEditorModal from '$lib/components/AvatarEditorModal.svelte';
 	import BannerEditorModal from '$lib/components/BannerEditorModal.svelte';
@@ -49,7 +50,7 @@
 
 		if (!res.ok) {
 			mediaError = 'Could not update profile picture.';
-			throw new Error('Avatar upload failed');
+			throw new Error(mediaError);
 		}
 
 		showAvatarModal = false;
@@ -69,7 +70,7 @@
 
 		if (!res.ok) {
 			mediaError = 'Could not update banner image.';
-			throw new Error('Banner upload failed');
+			throw new Error(mediaError);
 		}
 
 		showBannerModal = false;
@@ -88,7 +89,7 @@
 
 		if (!res.ok) {
 			mediaError = 'Could not remove profile picture.';
-			throw new Error('Avatar remove failed');
+			throw new Error(mediaError);
 		}
 
 		await reloadProfileData();
@@ -106,18 +107,18 @@
 
 		if (!res.ok) {
 			mediaError = 'Could not remove banner image.';
-			throw new Error('Banner remove failed');
+			throw new Error(mediaError);
 		}
 
 		await reloadProfileData();
 	}
 
-	function handleColorSubmit() {
-		return ({ update }: any) => {
-			mediaError = '';
-			update();
+	const handleColorSubmit: SubmitFunction = () => {
+		mediaError = '';
+		return async ({ update }) => {
+			await update();
 		};
-	}
+	};
 
 	async function handleAvatarShapeChange(shape: 'rounded-xl' | 'rounded-full') {
 		mediaError = '';
@@ -137,9 +138,11 @@
 		await reloadProfileData();
 	}
 
-	function handleBioSubmit() {
-		return ({ update }: any) => update();
-	}
+	const handleBioSubmit: SubmitFunction = () => {
+		return async ({ update }) => {
+			await update();
+		};
+	};
 </script>
 
 <div class="profile-layout">

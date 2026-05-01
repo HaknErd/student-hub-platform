@@ -1,6 +1,7 @@
 import { fail, redirect } from '@sveltejs/kit';
 import type { Actions, PageServerLoad } from './$types';
 import { changeUserPassword, sanitizeUserSettings, updateUserSettings } from '$lib/server/auth';
+import { isTrustedPost } from '$lib/server/request';
 
 export const load: PageServerLoad = async ({ locals }) => {
 	if (!locals.user) {
@@ -13,10 +14,11 @@ export const load: PageServerLoad = async ({ locals }) => {
 };
 
 export const actions: Actions = {
-	settings: async ({ request, locals }) => {
-		if (!locals.user) throw redirect(303, '/login');
+	settings: async (event) => {
+		if (!isTrustedPost(event)) return fail(403, { type: 'settings', message: 'Invalid request origin.' });
+		if (!event.locals.user) throw redirect(303, '/login');
 
-		const form = await request.formData();
+		const form = await event.request.formData();
 		const rawSettings: Record<string, unknown> = {};
 
 		for (const [key, value] of form.entries()) {
@@ -31,27 +33,28 @@ export const actions: Actions = {
 			return fail(400, { type: 'settings', message: 'Could not update settings.' });
 		}
 
-		const result = await updateUserSettings(locals.user.id, settings);
+		const result = await updateUserSettings(event.locals.user.id, settings);
 		if (!result.ok) {
 			return fail(400, { type: 'settings', message: 'Could not update settings.' });
 		}
 
-		locals.user = { ...locals.user, settings: { ...locals.user.settings, ...settings } as Record<string, unknown> };
+		event.locals.user = { ...event.locals.user, settings: { ...event.locals.user.settings, ...settings } as Record<string, unknown> };
 		return { type: 'settings', message: 'Settings updated.' };
 	},
 
-	password: async ({ request, locals, cookies }) => {
-		if (!locals.user) throw redirect(303, '/login');
+	password: async (event) => {
+		if (!isTrustedPost(event)) return fail(403, { type: 'password', message: 'Invalid request origin.' });
+		if (!event.locals.user) throw redirect(303, '/login');
 
-		const form = await request.formData();
+		const form = await event.request.formData();
 		const result = await changeUserPassword(
-			locals.user.id,
+			event.locals.user.id,
 			{
 				currentPassword: String(form.get('currentPassword') ?? ''),
 				newPassword: String(form.get('newPassword') ?? ''),
 				signOutOtherSessions: form.get('signOutOtherSessions') === 'on'
 			},
-			cookies
+			event.cookies
 		);
 
 		if (!result.ok) {

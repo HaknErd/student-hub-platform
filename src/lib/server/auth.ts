@@ -4,8 +4,11 @@ import { randomBytes, createHash } from 'node:crypto';
 import { unlink, mkdir, writeFile, readFile } from 'node:fs/promises';
 import { basename, join } from 'node:path';
 import type { PublicProfile, User } from '$lib/auth';
+import { writeAudit } from '$lib/server/audit';
 import { db } from '$lib/server/db';
+import { enforceUserActionRateLimit } from '$lib/server/rate-limit';
 import { hashPassword, verifyPassword } from '$lib/server/password';
+import { detectUploadSignature } from '$lib/server/upload-types';
 
 export type LoginResult =
 	| { ok: true; user: User }
@@ -37,11 +40,22 @@ function hashToken(token: string) {
 }
 
 function getRequestIp(event: RequestEvent) {
+	// CF-Connecting-IP is trusted only when the origin is behind Cloudflare.
+	// If the origin is directly reachable, a client could spoof this header.
+	// Ensure your server firewall only accepts connections from Cloudflare IPs
+	// (or your trusted reverse proxy) when relying on this value.
+	const cfConnectingIp = event.request.headers.get('cf-connecting-ip')?.trim() || null;
+	if (cfConnectingIp) return cfConnectingIp;
+
 	const forwardedFor = event.request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || null;
+	const xRealIp = event.request.headers.get('x-real-ip')?.trim() || null;
+	if (xRealIp) return xRealIp;
+	if (forwardedFor) return forwardedFor;
+
 	try {
 		return event.getClientAddress();
 	} catch {
-		return forwardedFor;
+		return null;
 	}
 }
 
@@ -151,6 +165,9 @@ export async function updateUserProfile(
 		);
 
 		if (result.rowCount !== 1) return { ok: false, reason: 'invalid_input' };
+		await writeAudit(userId, 'profile.update', 'user', userId, {
+			changed: ['email', 'first_name', 'last_name']
+		});
 		return { ok: true, user: mapUser(result.rows[0]) };
 	} catch (error) {
 		if (typeof error === 'object' && error && 'code' in error && error.code === '23505') {
@@ -214,6 +231,9 @@ export async function changeUserPassword(
 		userId,
 		await hashPassword(input.newPassword)
 	]);
+	await writeAudit(userId, 'password.change', 'user', userId, {
+		signOutOtherSessions: input.signOutOtherSessions
+	});
 
 	if (input.signOutOtherSessions) {
 		const token = cookies.get(getSessionCookieName());
@@ -384,8 +404,18 @@ export async function saveAvatar(
 	userId: string,
 	fileBuffer: Buffer,
 	mimeType: string
-): Promise<{ ok: true; filename: string } | { ok: false; reason: 'invalid_type' | 'too_large' | 'not_found' }> {
-	if (!ALLOWED_AVATAR_TYPES.has(mimeType)) {
+): Promise<{ ok: true; filename: string } | { ok: false; reason: 'invalid_type' | 'too_large' | 'not_found' | 'rate_limited' }> {
+	if (!(await enforceUserActionRateLimit('profile.avatar.upload', userId, 6, 60))) {
+		return { ok: false, reason: 'rate_limited' };
+	}
+
+	const detected = detectUploadSignature(fileBuffer);
+	const expectedByMime: Record<string, string> = {
+		'image/png': 'png',
+		'image/jpeg': 'jpeg',
+		'image/webp': 'webp'
+	};
+	if (!ALLOWED_AVATAR_TYPES.has(mimeType) || expectedByMime[mimeType] !== detected) {
 		return { ok: false, reason: 'invalid_type' };
 	}
 
@@ -397,8 +427,6 @@ export async function saveAvatar(
 		'select profile_picture_url from users where id = $1 and disabled_at is null',
 		[userId]
 	);
-
-	if (existing.rowCount !== 1) return { ok: false, reason: 'not_found' };
 
 	if (existing.rows[0].profile_picture_url) {
 		try {
@@ -422,6 +450,7 @@ export async function saveAvatar(
 		 where id = $1 and disabled_at is null`,
 		[userId, filename, hash]
 	);
+	await writeAudit(userId, 'profile.avatar.update', 'user', userId, { filename });
 
 	return { ok: true, filename };
 }
@@ -449,6 +478,7 @@ export async function removeAvatar(
 		 where id = $1 and disabled_at is null`,
 		[userId]
 	);
+	await writeAudit(userId, 'profile.avatar.remove', 'user', userId, {});
 
 	return { ok: true };
 }
@@ -489,8 +519,20 @@ export async function saveBanner(
 	userId: string,
 	fileBuffer: Buffer,
 	mimeType: string
-): Promise<{ ok: true; filename: string } | { ok: false; reason: 'invalid_type' | 'too_large' | 'not_found' }> {
-	if (!ALLOWED_AVATAR_TYPES.has(mimeType)) return { ok: false, reason: 'invalid_type' };
+): Promise<{ ok: true; filename: string } | { ok: false; reason: 'invalid_type' | 'too_large' | 'not_found' | 'rate_limited' }> {
+	if (!(await enforceUserActionRateLimit('profile.banner.upload', userId, 4, 60))) {
+		return { ok: false, reason: 'rate_limited' };
+	}
+
+	const detected = detectUploadSignature(fileBuffer);
+	const expectedByMime: Record<string, string> = {
+		'image/png': 'png',
+		'image/jpeg': 'jpeg',
+		'image/webp': 'webp'
+	};
+	if (!ALLOWED_AVATAR_TYPES.has(mimeType) || expectedByMime[mimeType] !== detected) {
+		return { ok: false, reason: 'invalid_type' };
+	}
 	if (fileBuffer.byteLength > BANNER_MAX_BYTES) return { ok: false, reason: 'too_large' };
 
 	const existing = await db.query(
@@ -523,6 +565,7 @@ export async function saveBanner(
 		 where id = $1 and disabled_at is null`,
 		[userId, filename, hash]
 	);
+	await writeAudit(userId, 'profile.banner.update', 'user', userId, { filename });
 
 	return { ok: true, filename };
 }
@@ -550,6 +593,7 @@ export async function removeBanner(
 		 where id = $1 and disabled_at is null`,
 		[userId]
 	);
+	await writeAudit(userId, 'profile.banner.remove', 'user', userId, {});
 
 	return { ok: true };
 }
@@ -574,6 +618,10 @@ export async function updateUserColors(
 	);
 
 	if (result.rowCount !== 1) return { ok: false, reason: 'not_found' };
+	await writeAudit(userId, 'profile.colors.update', 'user', userId, {
+		accentColor,
+		avatarBackgroundColor
+	});
 	return { ok: true };
 }
 
@@ -590,7 +638,7 @@ export function sanitizeUserSettings(input: Record<string, unknown>) {
 
 		if (key === 'compactMode') {
 			if (value === 'true' || value === 'false' || typeof value === 'boolean') {
-				settings.compactMode = String(value);
+				settings.compactMode = value === true || value === 'true';
 			}
 			continue;
 		}
@@ -614,6 +662,10 @@ export async function updateUserSettings(
 ): Promise<{ ok: true } | { ok: false; reason: 'invalid_input' | 'not_found' }> {
 	const settings = sanitizeUserSettings(input);
 	if (!Object.keys(settings).length) return { ok: false, reason: 'invalid_input' };
+	if ('bio' in settings) {
+		const bio = String(settings.bio ?? '').trim();
+		settings.bio = bio.slice(0, 1000);
+	}
 
 	const result = await db.query(
 		`update users set settings = coalesce(settings, '{}'::jsonb) || $2::jsonb, updated_at = now()
@@ -623,6 +675,9 @@ export async function updateUserSettings(
 	);
 
 	if (result.rowCount !== 1) return { ok: false, reason: 'not_found' };
+	await writeAudit(userId, 'profile.settings.update', 'user', userId, {
+		keys: Object.keys(settings)
+	});
 	return { ok: true };
 }
 
@@ -653,7 +708,6 @@ export async function searchProfiles(query: string, limit = 20): Promise<SearchR
 				similarity(first_name, $${i + 1}) > 0.15
 				or similarity(last_name, $${i + 1}) > 0.15
 				or similarity(display_name, $${i + 1}) > 0.15
-				or similarity(email::text, $${i + 1}) > 0.15
 				or first_name ilike $${terms.length + 1}
 				or last_name ilike $${terms.length + 1}
 				or display_name ilike $${terms.length + 1}
@@ -729,11 +783,9 @@ export async function searchProfilesPaged(
 			first_name ilike $1
 			or last_name ilike $1
 			or display_name ilike $1
-			or email::text ilike $1
 			or similarity(first_name, $2) > 0.15
 			or similarity(last_name, $2) > 0.15
 			or similarity(display_name, $2) > 0.15
-			or similarity(email::text, $2) > 0.15
 		)
 	`;
 
@@ -759,18 +811,16 @@ export async function searchProfilesPaged(
 					avatar_background_color,
 					settings,
 					greatest(
-						similarity(first_name, $2),
-						similarity(last_name, $2),
-						similarity(display_name, $2),
-						similarity(email::text, $2)
-					) as similarity
+					similarity(first_name, $2),
+					similarity(last_name, $2),
+					similarity(display_name, $2)
+				) as similarity
 				from users
 				where ${whereSql}
 				order by
 					case
 						when display_name ilike $1 then 0
-						when email::text ilike $1 then 1
-						else 2
+						else 1
 					end,
 					similarity desc,
 					display_name asc

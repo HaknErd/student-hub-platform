@@ -20,6 +20,7 @@ export const actions: Actions = {
 				invalid_input: 'Enter a title, subject, and valid resource type.',
 				license_required: 'Confirm that the resource is allowed to be shared.',
 				invalid_url: 'Enter a valid URL.',
+				rate_limited: 'Please wait before submitting another resource.',
 				missing_content: 'Add either an external link or a file.',
 				invalid_file_type: 'Use PDF, PNG, JPEG, WebP, or plain text.',
 				file_too_large: 'File must be 10 MB or smaller.'
