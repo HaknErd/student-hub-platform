@@ -571,7 +571,7 @@
 		.avatar-modal-menu-btn {
 			@apply flex items-center text-left gap-4 p-4 rounded-xl transition-colors cursor-pointer;
 			&:hover {
-				@apply bg-surface border border-border -m-[1px];
+				@apply bg-surface border border-border -m-px;
 				padding: calc(1rem - 1px);
 			}
 		}
