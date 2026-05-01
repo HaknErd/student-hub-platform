@@ -27,15 +27,17 @@
 				{/if}
 			</nav>
 
-			<form class="header-search" method="GET" action="/search">
-				<input
-					type="search"
-					name="q"
-					placeholder="Search..."
-					autocomplete="off"
-					aria-label="Search people and resources"
-				/>
-			</form>
+			{#if user}
+				<form class="header-search" method="GET" action="/search">
+					<input
+						type="search"
+						name="q"
+						placeholder="Search..."
+						autocomplete="off"
+						aria-label="Search people and resources"
+					/>
+				</form>
+			{/if}
 
 			{#if user}
 				<div class="auth-chip" aria-label="Logged in as">

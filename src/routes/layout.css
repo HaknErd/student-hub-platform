@@ -476,7 +476,7 @@
 
 	/* ---- Auth pages ---- */
 	.auth-page {
-		@apply max-w-md;
+		@apply max-w-lg;
 		& > h1 {
 			@apply text-2xl sm:text-3xl font-semibold tracking-tight text-text;
 		}
