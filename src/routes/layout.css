@@ -1,0 +1,862 @@
+@import 'tailwindcss';
+@plugin '@tailwindcss/forms';
+@plugin '@tailwindcss/typography';
+
+/* -----------------------------
+   Design Tokens
+------------------------------ */
+@theme {
+	--color-primary: #2563eb;
+	--color-primary-hover: #1d4ed8;
+
+	--color-text: #0f172a;
+	--color-text-muted: #475569;
+
+	--color-bg: #ffffff;
+	--color-surface: #f8fafc;
+	--color-border: #e2e8f0;
+
+	--color-danger: #dc2626;
+	--color-danger-surface: #fef2f2;
+	--color-danger-border: #fecaca;
+}
+
+@media (prefers-color-scheme: dark) {
+	@theme {
+		--color-primary: #60a5fa;
+		--color-primary-hover: #3b82f6;
+
+		--color-text: #e2e8f0;
+		--color-text-muted: #94a3b8;
+
+		--color-bg: #0b1220;
+		--color-surface: #0f172a;
+		--color-border: #1e293b;
+
+		--color-danger: #ef4444;
+		--color-danger-surface: #1c0e0e;
+		--color-danger-border: #3b1818;
+	}
+}
+
+/* -----------------------------
+   Base
+------------------------------ */
+@layer base {
+	html {
+		@apply text-text bg-bg antialiased;
+	}
+
+	body {
+		@apply min-h-screen;
+	}
+
+	a {
+		@apply text-primary underline-offset-4;
+		&:hover { @apply text-primary-hover; }
+	}
+}
+
+/* -----------------------------
+   Components
+------------------------------ */
+@layer components {
+	/* ---- Layout shells ---- */
+	.page-container {
+		@apply max-w-6xl mx-auto px-4 sm:px-6;
+	}
+
+	.app-shell {
+		@apply min-h-screen flex flex-col;
+	}
+
+	.app-main {
+		@apply flex-1;
+	}
+
+	.app-content {
+		@apply py-10;
+	}
+
+	/* ---- Header ---- */
+	.site-header {
+		@apply w-full bg-surface border-b border-border;
+	}
+
+	.site-header__inner {
+		@apply max-w-6xl mx-auto px-4 sm:px-6 h-14 flex items-center justify-between gap-4;
+	}
+
+	.site-header__right {
+		@apply flex items-center gap-3;
+	}
+
+	.site-brand {
+		@apply font-semibold text-text no-underline tracking-tight;
+		&:hover { @apply text-text; }
+	}
+
+	.site-nav {
+		@apply flex items-center gap-1;
+		& > * {
+			@apply no-underline text-text-muted px-3 py-2 rounded-md text-sm;
+			&:hover { @apply bg-bg text-text; }
+		}
+	}
+
+	/* ---- Auth chip ---- */
+	.auth-chip {
+		@apply flex items-center gap-2 rounded-md border border-border bg-bg px-3 py-1.5 text-sm;
+	}
+
+	.auth-chip__value {
+		@apply text-text font-medium no-underline;
+		&:hover { @apply text-primary; }
+	}
+
+	.auth-chip__action {
+		@apply ml-1 rounded-md px-2 py-1 text-xs text-text-muted;
+		&:hover { @apply bg-surface text-text; }
+	}
+
+	.auth-login {
+		@apply no-underline rounded-md border border-border bg-bg px-3 py-1.5 text-sm text-text-muted;
+		&:hover { @apply bg-surface text-text; }
+	}
+
+	/* ---- Footer ---- */
+	.site-footer {
+		@apply w-full mt-auto bg-surface border-t border-border;
+	}
+
+	.site-footer__inner {
+		@apply max-w-6xl mx-auto px-4 sm:px-6 py-8 flex flex-col gap-6 md:flex-row md:items-start md:justify-between;
+		& a {
+			@apply no-underline text-text-muted text-sm;
+			&:hover { @apply text-text; }
+		}
+	}
+
+	.site-footer__brand {
+		@apply min-w-0;
+	}
+
+	.site-footer__title {
+		@apply text-text font-semibold tracking-tight;
+	}
+
+	.site-footer__tagline {
+		@apply text-text-muted text-sm mt-1 max-w-prose;
+	}
+
+	.site-footer__links {
+		@apply flex flex-wrap gap-x-4 gap-y-2;
+	}
+
+	.site-footer__meta {
+		@apply max-w-6xl mx-auto px-4 sm:px-6 pb-8 text-xs text-text-muted;
+	}
+
+	/* ---- Home page ---- */
+	.home {
+		& > h1 {
+			@apply text-2xl sm:text-3xl font-semibold tracking-tight text-text;
+		}
+		& > p {
+			@apply mt-3 text-text-muted;
+		}
+		& > h2 {
+			@apply mt-8 text-sm font-semibold text-text;
+		}
+	}
+
+	/* ---- Status list ---- */
+	.status-list {
+		@apply mt-3 flex flex-wrap gap-2;
+		& > li {
+			@apply relative inline-flex items-center rounded-md border border-border bg-surface px-3 py-1.5 pl-7 text-sm text-text;
+			&::before {
+				content: '';
+				@apply absolute left-3 top-1/2 h-2 w-2 -translate-y-1/2 rounded-full bg-yellow-400;
+			}
+			&.is-done::before {
+				@apply bg-green-500;
+			}
+		}
+	}
+
+	/* ---- Page surfaces (legacy, kept for other pages) ---- */
+	.stack-page {
+		@apply grid gap-6;
+	}
+
+	.page-header {
+		@apply flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between;
+		& p {
+			@apply text-xs font-semibold uppercase text-text-muted;
+		}
+		& h1 {
+			@apply mt-1 text-2xl sm:text-3xl font-semibold tracking-tight text-text;
+		}
+		& a {
+			@apply inline-flex items-center justify-center rounded-md border border-border bg-bg px-3 py-2 text-sm text-text-muted no-underline;
+			&:hover { @apply bg-surface text-text; }
+		}
+	}
+
+	/* ---- Panel (reusable card, legacy) ---- */
+	.panel {
+		@apply rounded-lg border border-border bg-surface p-5;
+		& > header {
+			@apply border-b border-border pb-4;
+			& > h2 {
+				@apply text-base font-semibold text-text;
+			}
+			& > p {
+				@apply mt-1 text-sm text-text-muted;
+			}
+		}
+	}
+
+	/* ---- Profile hero (legacy) ---- */
+	.profile-hero {
+		@apply flex flex-col gap-4 rounded-lg border border-border bg-surface p-5 sm:flex-row sm:items-center;
+		& p {
+			@apply text-xs font-semibold uppercase text-text-muted;
+		}
+		& h1 {
+			@apply mt-1 text-2xl sm:text-3xl font-semibold tracking-tight text-text;
+		}
+		& > div:nth-child(2) {
+			@apply min-w-0 flex-1;
+		}
+		& > a {
+			@apply inline-flex items-center justify-center rounded-md border border-border bg-bg px-3 py-2 text-sm text-text-muted no-underline;
+			&:hover { @apply bg-surface text-text; }
+		}
+	}
+
+	/* ---- Avatar ---- */
+	.avatar {
+		@apply flex shrink-0 items-center justify-center rounded-lg bg-primary text-lg font-semibold text-white overflow-hidden select-none;
+		&.sm { @apply h-8 w-8 text-xs; }
+		&.md { @apply h-16 w-16 text-lg; }
+		&.lg { @apply h-24 w-24 text-2xl; }
+		&.xl { @apply h-32 w-32 text-3xl; }
+		&.rounded-full { @apply rounded-full; }
+	}
+
+	.avatar-editable {
+		@apply relative cursor-pointer block;
+	}
+
+	.avatar-overlay {
+		@apply absolute inset-0 bg-black/40 rounded-lg opacity-0 flex items-center justify-center text-xs text-white font-medium transition-opacity;
+		.avatar-editable:hover & { @apply opacity-100; }
+		.avatar-editable.rounded-full & { @apply rounded-full; }
+	}
+
+	img.avatar {
+		@apply object-cover p-0;
+	}
+
+	/* ---- Legacy inline fields (kept but unused) ---- */
+	.inline-field {
+		@apply rounded-md border border-transparent p-3 -mx-3 cursor-pointer transition-colors;
+		&:hover { @apply border-border bg-bg; }
+		& > dt {
+			@apply text-xs font-semibold uppercase text-text-muted;
+		}
+		& > dd {
+			@apply mt-1 text-sm font-medium text-text;
+		}
+		&.editing {
+			@apply border-primary bg-bg cursor-default;
+		}
+	}
+
+	.inline-field-input {
+		@apply mt-1 w-full rounded border border-primary bg-bg px-2 py-1 text-sm text-text outline-none;
+		&:focus { @apply ring-2 ring-primary/25; }
+	}
+
+	.inline-saving {
+		@apply mt-1 text-xs text-text-muted;
+	}
+
+	/* ---- Color swatches ---- */
+	.color-picker {
+		@apply flex flex-wrap gap-2;
+	}
+
+	.color-swatch {
+		@apply w-8 h-8 rounded-lg border-2 border-transparent cursor-pointer transition-shadow;
+		&:hover { @apply shadow-md; }
+		&.active { @apply border-white ring-2 ring-primary; }
+	}
+
+	.color-row {
+		@apply mt-3;
+		& > dt {
+			@apply text-xs font-semibold uppercase text-text-muted mb-2;
+		}
+	}
+
+	/* ---- Detail list (read-only, legacy) ---- */
+	.detail-list {
+		@apply mt-5 grid gap-4 sm:grid-cols-3;
+		& > div {
+			@apply rounded-md border border-border bg-bg p-4;
+		}
+		& dt {
+			@apply text-xs font-semibold uppercase text-text-muted;
+		}
+		& dd {
+			@apply mt-1 text-sm font-medium text-text;
+		}
+	}
+
+	/* ---- Field list (editable, legacy) ---- */
+	.field-list {
+		@apply mt-5 grid gap-1;
+	}
+
+	/* ---- Color list (legacy) ---- */
+	.color-list {
+		@apply mt-5 grid gap-4;
+	}
+
+	/* ---- Forms ---- */
+	.form {
+		@apply mt-6 grid gap-4;
+		& > label {
+			@apply grid gap-2;
+			& > span {
+				@apply text-sm font-medium text-text;
+			}
+		}
+		& input,
+		& select,
+		& textarea {
+			@apply w-full rounded-md border border-border bg-bg px-3 py-2 text-sm text-text;
+			&::placeholder { @apply text-text-muted; }
+			&:focus {
+				@apply outline-none ring-2 ring-primary/25 border-primary;
+			}
+		}
+	}
+
+	/* ---- Buttons ---- */
+	.btn {
+		@apply mt-2 inline-flex items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-white;
+		&:hover { @apply bg-primary-hover; }
+		&:disabled { @apply opacity-60 cursor-not-allowed; }
+	}
+
+	.btn-ghost {
+		@apply inline-flex items-center justify-center rounded-md border border-border bg-bg px-3 py-2 text-sm text-text-muted no-underline;
+		&:hover { @apply bg-surface text-text; }
+	}
+
+	.btn-danger {
+		@apply bg-danger;
+		&:hover { @apply bg-red-700; }
+	}
+
+	/* ---- Status messages ---- */
+	.form-error {
+		@apply rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700;
+	}
+
+	.form-success {
+		@apply rounded-md border border-green-200 bg-green-50 px-3 py-2 text-sm text-green-700;
+	}
+
+	/* ---- Check field ---- */
+	.check-field {
+		@apply flex flex-row items-center gap-2;
+		& > input {
+			@apply h-4 w-4 rounded border-border text-primary;
+		}
+		& > span {
+			@apply text-sm text-text-muted;
+		}
+	}
+
+	/* ---- Collapsible details ---- */
+	details.panel {
+		@apply p-0 overflow-hidden;
+		& > summary {
+			@apply p-5 cursor-pointer font-medium text-text select-none list-none;
+			&::-webkit-details-marker { display: none; }
+			&::after {
+				content: '▸';
+				@apply inline-block ml-2 transition-transform text-text-muted;
+			}
+			&:hover { @apply bg-bg/30; }
+		}
+		&[open] > summary::after {
+			@apply rotate-90;
+		}
+		& > .details-body {
+			@apply p-5 pt-0;
+		}
+	}
+
+	/* ---- Legacy security panel ---- */
+	.security-panel {
+		@apply rounded-lg border p-5;
+		border-color: var(--color-danger-border);
+		background-color: var(--color-danger-surface);
+		& > header {
+			@apply border-b pb-4;
+			border-color: var(--color-danger-border);
+			& > h2 {
+				@apply text-base font-semibold;
+				color: var(--color-danger);
+			}
+			& > p {
+				@apply mt-1 text-sm text-text-muted;
+			}
+		}
+		& .warning {
+			@apply mt-4 rounded-md px-3 py-2 text-sm;
+			background-color: var(--color-danger-surface);
+			border: 1px solid var(--color-danger-border);
+			color: var(--color-danger);
+		}
+	}
+
+	/* ---- Settings grid (legacy) ---- */
+	.settings-grid {
+		@apply grid gap-6;
+	}
+
+	/* ---- Crop modal (legacy, kept for backward compat) ---- */
+	.crop-modal-backdrop {
+		@apply fixed inset-0 z-50 bg-black/70 flex items-center justify-center p-4;
+	}
+
+	.crop-modal {
+		@apply bg-surface rounded-xl border border-border max-w-lg w-full overflow-hidden;
+
+		& > header {
+			@apply flex items-center justify-between p-4 border-b border-border;
+			& h3 { @apply text-sm font-semibold text-text; }
+			& button {
+				@apply text-text-muted text-lg leading-none;
+				&:hover { @apply text-text; }
+			}
+		}
+
+		& > .crop-area {
+			@apply flex items-center justify-center bg-black/60;
+			height: 320px;
+		}
+
+		& > .crop-controls {
+			@apply p-4 border-t border-border flex items-center gap-4;
+		}
+
+		& > footer {
+			@apply flex justify-end gap-3 p-4 border-t border-border;
+		}
+	}
+
+	.crop-slider {
+		@apply flex-1;
+		& input {
+			@apply w-full;
+		}
+	}
+
+	/* ---- Auth pages ---- */
+	.auth-page {
+		@apply max-w-md;
+		& > h1 {
+			@apply text-2xl sm:text-3xl font-semibold tracking-tight text-text;
+		}
+	}
+
+	/* ---- Search ---- */
+	.header-search {
+		@apply hidden md:block;
+		& input {
+			@apply w-48 rounded-md border border-border bg-bg px-3 py-1.5 text-sm text-text placeholder-text-muted outline-none transition-colors;
+			&:focus {
+				@apply border-primary ring-1 ring-primary/25 w-64;
+			}
+		}
+	}
+
+	.search-bar-full {
+		@apply flex gap-3;
+		& input {
+			@apply flex-1 rounded-md border border-border bg-bg px-3 py-2 text-sm text-text placeholder-text-muted outline-none;
+			&:focus {
+				@apply border-primary ring-2 ring-primary/25;
+			}
+		}
+		& .btn {
+			@apply mt-0;
+		}
+	}
+
+	.search-results {
+		@apply grid gap-2;
+	}
+
+	.search-result-item {
+		@apply flex items-center gap-4 rounded-lg border border-border bg-surface p-4 no-underline transition-colors;
+		&:hover {
+			@apply border-primary/30 bg-bg;
+		}
+	}
+
+	.search-result-info {
+		@apply grid;
+	}
+
+	.search-result-name {
+		@apply text-sm font-medium text-text;
+	}
+
+	.search-result-role {
+		@apply text-xs text-text-muted;
+	}
+
+	.search-empty {
+		@apply mt-8 text-sm text-text-muted text-center;
+	}
+
+	.search-page-title > h1 {
+		@apply text-2xl sm:text-3xl font-semibold tracking-tight text-text;
+	}
+
+	/* ============================================
+	   NEW COMPONENTS — AVATAR EDITOR MODAL
+	   ============================================ */
+
+	.avatar-modal-backdrop {
+		@apply fixed inset-0 z-50 flex items-center justify-center p-4;
+	}
+
+	.avatar-modal-backdrop-scrim {
+		@apply absolute inset-0 bg-black/60;
+	}
+
+	.avatar-modal {
+		@apply relative z-10 bg-surface rounded-2xl border border-border max-w-md w-full overflow-hidden shadow-2xl;
+
+		.avatar-modal-header {
+			@apply flex items-center justify-between px-6 py-4 border-b border-border;
+			h3 {
+				@apply text-base font-semibold text-text;
+			}
+		}
+
+		.avatar-modal-close {
+			@apply text-text-muted text-xl leading-none rounded-md p-1;
+			&:hover { @apply text-text bg-bg; }
+		}
+
+		.avatar-modal-upload {
+			@apply flex flex-col items-center justify-center p-10 cursor-pointer border-2 border-dashed border-border rounded-xl m-6 transition-colors;
+			&:hover {
+				@apply border-primary/40 bg-bg;
+			}
+		}
+
+		.avatar-modal-upload-icon {
+			@apply text-text-muted mb-3;
+		}
+
+		.avatar-modal-upload-text {
+			@apply text-sm font-medium text-text;
+		}
+
+		.avatar-modal-upload-hint {
+			@apply mt-1 text-xs text-text-muted;
+		}
+
+		.avatar-modal-crop {
+			@apply flex flex-col;
+		}
+
+		.avatar-modal-crop-area {
+			@apply flex items-center justify-center bg-zinc-900/90 select-none;
+			height: 360px;
+			cursor: grab;
+			&:active { cursor: grabbing; }
+		}
+
+		.avatar-modal-crop-controls {
+			@apply flex items-center gap-3 px-6 py-4 border-t border-border;
+		}
+
+		.avatar-modal-zoom-slider {
+			@apply flex-1;
+			input {
+				@apply w-full accent-primary;
+			}
+		}
+
+		.avatar-modal-preview {
+			@apply flex flex-col items-center py-8 px-6;
+		}
+
+		.avatar-modal-preview-image-wrap {
+			@apply mb-6;
+		}
+
+		.avatar-modal-preview-image {
+			@apply w-40 h-40 object-cover;
+		}
+
+		.avatar-modal-shape-select {
+			@apply w-full;
+		}
+
+		.avatar-modal-shape-options {
+			@apply flex gap-3;
+		}
+
+		.avatar-modal-shape-btn {
+			@apply flex flex-col items-center gap-2 p-3 rounded-xl border-2 border-border cursor-pointer transition-all;
+			&:hover { @apply border-primary/30 bg-bg; }
+			&.active { @apply border-primary bg-primary/5; }
+		}
+
+		.avatar-modal-shape-sample {
+			@apply w-10 h-10 bg-primary;
+		}
+
+		.avatar-modal-error {
+			@apply mx-6 mb-4 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700;
+		}
+
+		.avatar-modal-footer {
+			@apply flex items-center justify-between px-6 py-4 border-t border-border;
+		}
+
+		.avatar-modal-footer-right {
+			@apply flex items-center gap-3;
+		}
+
+		.avatar-modal-confirm-text {
+			@apply text-sm font-medium text-text;
+		}
+	}
+
+	/* ============================================
+	   NEW COMPONENTS — PROFILE PAGE
+	   ============================================ */
+
+	.profile-page {
+		@apply grid gap-8;
+	}
+
+	.profile-hero-new {
+		@apply flex flex-col items-start gap-5 rounded-2xl border border-border bg-surface p-6 sm:flex-row sm:items-center;
+	}
+
+	.profile-hero-avatar {
+		@apply shrink-0;
+	}
+
+	.profile-hero-info {
+		@apply min-w-0 flex-1;
+	}
+
+	.profile-hero-role {
+		@apply text-xs font-semibold uppercase tracking-wide text-text-muted;
+	}
+
+	.profile-hero-name {
+		@apply mt-1 text-2xl sm:text-3xl font-semibold tracking-tight text-text;
+	}
+
+	.profile-hero-actions {
+		@apply mt-3 flex items-center gap-3 flex-wrap;
+	}
+
+	.profile-hero-action-btn {
+		@apply text-xs text-text-muted underline underline-offset-2;
+		&:hover { @apply text-danger; }
+	}
+
+	.profile-hero-shape-toggle {
+		@apply flex items-center gap-1 rounded-md border border-border bg-bg p-1;
+	}
+
+	.profile-shape-btn {
+		@apply flex items-center justify-center w-7 h-7 rounded text-text-muted transition-colors;
+		&:hover { @apply bg-surface text-text; }
+		&.active { @apply bg-primary text-white; }
+	}
+
+	.profile-grid {
+		@apply grid gap-6 lg:grid-cols-2;
+	}
+
+	.profile-card {
+		@apply rounded-2xl border border-border bg-surface p-6;
+	}
+
+	.profile-card-header {
+		@apply border-b border-border pb-4 mb-5;
+		h2 {
+			@apply text-base font-semibold text-text;
+		}
+		p {
+			@apply mt-1 text-sm text-text-muted;
+		}
+	}
+
+	/* ---- Inline editable fields (new) ---- */
+	.field-list-new {
+		@apply grid gap-1;
+	}
+
+	.inline-edit-row {
+		@apply w-full text-left rounded-lg border border-transparent p-3 -mx-3 transition-colors;
+		&:not(.editing):hover {
+			@apply border-border bg-bg cursor-pointer;
+		}
+		&.editing {
+			@apply border-primary/30 bg-bg cursor-default;
+		}
+	}
+
+	.inline-edit-label {
+		@apply text-xs font-semibold uppercase text-text-muted;
+	}
+
+	.inline-edit-value {
+		@apply mt-1 text-sm font-medium text-text;
+	}
+
+	.inline-edit-input {
+		@apply mt-1 w-full rounded-md border border-border bg-bg px-3 py-1.5 text-sm text-text outline-none;
+		&:focus {
+			@apply border-primary ring-2 ring-primary/20;
+		}
+	}
+
+	.inline-edit-status {
+		@apply mt-1 block text-xs text-text-muted;
+	}
+
+	.inline-edit-error {
+		@apply mt-1 block text-xs text-red-600;
+	}
+
+	/* ---- Color sections (new) ---- */
+	.color-section {
+		@apply grid gap-6;
+	}
+
+	.color-field {
+		@apply grid gap-2;
+	}
+
+	.color-field-label {
+		@apply text-xs font-semibold uppercase text-text-muted;
+	}
+
+	.color-picker-form {
+		@apply flex flex-wrap gap-2;
+	}
+
+	.color-swatch-lg {
+		@apply w-9 h-9 rounded-lg border-2 border-transparent cursor-pointer transition-all;
+		&:hover { @apply shadow-md scale-110; }
+		&.active { @apply border-white ring-2 ring-primary ring-offset-1 ring-offset-surface; }
+	}
+
+	/* ============================================
+	   NEW COMPONENTS — SETTINGS PAGE
+	   ============================================ */
+
+	.settings-page {
+		@apply grid gap-8;
+	}
+
+	.settings-header {
+		@apply flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between;
+	}
+
+	.settings-header-label {
+		@apply text-xs font-semibold uppercase text-text-muted;
+	}
+
+	.settings-header-title {
+		@apply mt-1 text-2xl sm:text-3xl font-semibold tracking-tight text-text;
+	}
+
+	.settings-layout {
+		@apply grid gap-6 lg:grid-cols-2 lg:items-start;
+	}
+
+	.settings-card {
+		@apply rounded-2xl border border-border bg-surface p-6;
+	}
+
+	.settings-card-danger {
+		border-color: var(--color-danger-border);
+		background-color: var(--color-danger-surface);
+	}
+
+	.settings-card-header {
+		@apply border-b border-border pb-4 mb-6;
+		h2 {
+			@apply text-base font-semibold text-text;
+		}
+		p {
+			@apply mt-1 text-sm text-text-muted;
+		}
+	}
+
+	.settings-card-header-danger {
+		border-color: var(--color-danger-border);
+		h2 {
+			color: var(--color-danger);
+		}
+	}
+
+	.settings-form {
+		@apply grid gap-5;
+	}
+
+	.settings-field {
+		@apply grid gap-2;
+	}
+
+	.settings-field-label {
+		@apply text-sm font-medium text-text;
+	}
+
+	.settings-field-with-status {
+		@apply flex items-center gap-2;
+		select {
+			@apply flex-1 rounded-md border border-border bg-bg px-3 py-2 text-sm text-text;
+			outline: none;
+			&:focus { @apply border-primary ring-2 ring-primary/20; }
+		}
+	}
+
+	.settings-status-muted {
+		@apply text-xs text-text-muted shrink-0;
+	}
+
+	.settings-status-success {
+		@apply text-xs text-green-600 shrink-0;
+	}
+
+	.settings-warning {
+		@apply rounded-lg px-3 py-2 text-sm;
+		background-color: var(--color-danger-surface);
+		border: 1px solid var(--color-danger-border);
+		color: var(--color-danger);
+	}
+}
