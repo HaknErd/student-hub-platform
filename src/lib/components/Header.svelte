@@ -28,10 +28,7 @@
 				{/if}
 			</nav>
 
-			<form class="header-search" method="GET" action="/search" onsubmit={(e) => {
-				const form = e.currentTarget;
-				setTimeout(() => form.reset(), 10);
-			}}>
+			<form class="header-search" method="GET" action="/search">
 				<input
 					type="search"
 					name="q"

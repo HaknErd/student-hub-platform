@@ -10,6 +10,7 @@ import {
 	updateUserColors,
 	updateUserSettings
 } from '$lib/server/auth';
+import { isTrustedPost } from '$lib/server/request';
 
 export const load: PageServerLoad = async ({ params, locals }) => {
 	const profile = await getPublicProfile(params.id);
@@ -26,7 +27,10 @@ export const load: PageServerLoad = async ({ params, locals }) => {
 };
 
 export const actions: Actions = {
-	updateField: async ({ request, locals, params }) => {
+	updateField: async (event) => {
+		if (!isTrustedPost(event)) return fail(403, { error: 'Invalid request origin.' });
+
+		const { request, locals, params } = event;
 		if (!locals.user || locals.user.id !== params.id) throw redirect(303, '/login');
 
 		const form = await request.formData();
@@ -66,7 +70,10 @@ export const actions: Actions = {
 		return fail(400, { field, error: 'Unknown field.' });
 	},
 
-	updateColor: async ({ request, locals, params }) => {
+	updateColor: async (event) => {
+		if (!isTrustedPost(event)) return fail(403, { error: 'Invalid request origin.' });
+
+		const { request, locals, params } = event;
 		if (!locals.user || locals.user.id !== params.id) throw redirect(303, '/login');
 
 		const form = await request.formData();
@@ -89,7 +96,10 @@ export const actions: Actions = {
 		return { colorField, value };
 	},
 
-	updateAvatar: async ({ request, locals, params }) => {
+	updateAvatar: async (event) => {
+		if (!isTrustedPost(event)) return fail(403, { error: 'Invalid request origin.' });
+
+		const { request, locals, params } = event;
 		if (!locals.user || locals.user.id !== params.id) throw redirect(303, '/login');
 
 		const form = await request.formData();
@@ -128,7 +138,10 @@ export const actions: Actions = {
 		return { avatarUpdated: true, newFilename: result.filename };
 	},
 
-	updateAvatarShape: async ({ request, locals, params }) => {
+	updateAvatarShape: async (event) => {
+		if (!isTrustedPost(event)) return fail(403, { error: 'Invalid request origin.' });
+
+		const { request, locals, params } = event;
 		if (!locals.user || locals.user.id !== params.id) throw redirect(303, '/login');
 
 		const form = await request.formData();
@@ -147,7 +160,10 @@ export const actions: Actions = {
 	},
 
 
-	updateBanner: async ({ request, locals, params }) => {
+	updateBanner: async (event) => {
+		if (!isTrustedPost(event)) return fail(403, { error: 'Invalid request origin.' });
+
+		const { request, locals, params } = event;
 		if (!locals.user || locals.user.id !== params.id) throw redirect(303, '/login');
 
 		const form = await request.formData();
@@ -178,7 +194,10 @@ export const actions: Actions = {
 		return { bannerUpdated: true, newFilename: result.filename };
 	},
 
-	updateSettings: async ({ request, locals, params }) => {
+	updateSettings: async (event) => {
+		if (!isTrustedPost(event)) return fail(403, { error: 'Invalid request origin.' });
+
+		const { request, locals, params } = event;
 		if (!locals.user || locals.user.id !== params.id) throw redirect(303, '/login');
 
 		const form = await request.formData();

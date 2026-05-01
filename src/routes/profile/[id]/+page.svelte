@@ -35,47 +35,47 @@
 		await invalidateAll();
 	}
 
-	function handleAvatarSave(blob: Blob, shape: 'rounded-xl' | 'rounded-full') {
+	async function handleAvatarSave(blob: Blob, shape: 'rounded-xl' | 'rounded-full') {
 		savingAvatar = true;
 
 		const formData = new FormData();
 		formData.append('avatar', blob, 'avatar.webp');
 		formData.append('avatarShape', shape);
 
-		fetch(`/profile/${data.profile.id}?/updateAvatar`, {
-			method: 'POST',
-			body: formData
-		})
-			.then(async (res) => {
-				if (res.ok) {
-					showAvatarModal = false;
-					await reloadProfileData();
-				}
-			})
-			.finally(() => {
-				savingAvatar = false;
+		try {
+			const res = await fetch(`/profile/${data.profile.id}?/updateAvatar`, {
+				method: 'POST',
+				body: formData
 			});
+
+			if (!res.ok) throw new Error('Avatar upload failed');
+
+			showAvatarModal = false;
+			await reloadProfileData();
+		} finally {
+			savingAvatar = false;
+		}
 	}
 
-	function handleBannerSave(blob: Blob) {
+	async function handleBannerSave(blob: Blob) {
 		savingBanner = true;
 
 		const formData = new FormData();
 		formData.append('banner', blob, 'banner.webp');
 
-		fetch(`/profile/${data.profile.id}?/updateBanner`, {
-			method: 'POST',
-			body: formData
-		})
-			.then(async (res) => {
-				if (res.ok) {
-					showBannerModal = false;
-					await reloadProfileData();
-				}
-			})
-			.finally(() => {
-				savingBanner = false;
+		try {
+			const res = await fetch(`/profile/${data.profile.id}?/updateBanner`, {
+				method: 'POST',
+				body: formData
 			});
+
+			if (!res.ok) throw new Error('Banner upload failed');
+
+			showBannerModal = false;
+			await reloadProfileData();
+		} finally {
+			savingBanner = false;
+		}
 	}
 
 	function handleRemoveAvatar() {
@@ -118,27 +118,36 @@
 </script>
 
 <div class="profile-layout">
-	<button
-		type="button"
-		class="profile-banner-wrap"
-		class:editable-banner={data.isOwnProfile}
-		disabled={!data.isOwnProfile}
-		onclick={() => data.isOwnProfile && (showBannerModal = true)}
-		aria-label={data.isOwnProfile ? 'Edit banner image' : 'Profile banner'}
-	>
-		{#if bannerImageUrl}
-			<img class="profile-banner-img" src={bannerImageUrl} alt="" />
-		{:else}
-			<div
-				class="profile-banner"
-				style="background-color: {data.profile.accentColor || 'var(--color-border)'}"
-			></div>
-		{/if}
+	{#if data.isOwnProfile}
+		<button
+			type="button"
+			class="profile-banner-wrap editable-banner"
+			onclick={() => (showBannerModal = true)}
+			aria-label="Edit banner image"
+		>
+			{#if bannerImageUrl}
+				<img class="profile-banner-img" src={bannerImageUrl} alt="" />
+			{:else}
+				<div
+					class="profile-banner"
+					style="background-color: {data.profile.accentColor || 'var(--color-border)'}"
+				></div>
+			{/if}
 
-		{#if data.isOwnProfile}
 			<span class="profile-banner-overlay">Edit banner</span>
-		{/if}
-	</button>
+		</button>
+	{:else}
+		<div class="profile-banner-wrap" aria-label="Profile banner">
+			{#if bannerImageUrl}
+				<img class="profile-banner-img" src={bannerImageUrl} alt="" />
+			{:else}
+				<div
+					class="profile-banner"
+					style="background-color: {data.profile.accentColor || 'var(--color-border)'}"
+				></div>
+			{/if}
+		</div>
+	{/if}
 
 	<div class="profile-container">
 		<div class="profile-top-row">
@@ -182,8 +191,8 @@
 						<InlineEditableField label="Last name" value={data.profile.lastName} field="lastName" action="?/updateField" />
 						<InlineEditableField label="Email" value={data.ownEmail || ''} field="email" action="?/updateField" type="email" />
 						<div class="inline-edit-row" style="cursor: default">
-							<dt class="inline-edit-label">Role</dt>
-							<dd class="inline-edit-value">{data.profile.role}</dd>
+							<span class="inline-edit-label">Role</span>
+							<span class="inline-edit-value">{data.profile.role}</span>
 						</div>
 					</div>
 
