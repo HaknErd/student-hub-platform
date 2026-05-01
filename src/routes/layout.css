@@ -4025,3 +4025,62 @@
 		padding-inline: 0.75rem;
 	}
 }
+
+
+/* ---- Final settings security form cleanup ---- */
+.settings-section.danger-section .settings-row.stacked {
+	grid-template-columns: 1fr !important;
+}
+
+.settings-section.danger-section .settings-form-grid {
+	width: 100%;
+	max-width: none !important;
+	display: grid;
+	grid-template-columns: 1fr;
+	gap: 1rem;
+}
+
+.settings-section.danger-section .settings-form-grid label:not(.settings-switch),
+.settings-section.danger-section .settings-form-grid input[type='password'],
+.settings-section.danger-section .settings-danger-note {
+	width: 100%;
+	max-width: none !important;
+}
+
+.settings-section.danger-section input[type='password'] {
+	height: 2.75rem;
+	border-radius: 0.65rem;
+	background: var(--color-bg) !important;
+	color: var(--color-text) !important;
+	caret-color: var(--color-text);
+}
+
+/* Override Chrome/Firefox password autofill yellow */
+.settings-section.danger-section input[type='password']:-webkit-autofill,
+.settings-section.danger-section input[type='password']:-webkit-autofill:hover,
+.settings-section.danger-section input[type='password']:-webkit-autofill:focus {
+	-webkit-text-fill-color: var(--color-text) !important;
+	box-shadow: 0 0 0 1000px var(--color-bg) inset !important;
+	caret-color: var(--color-text) !important;
+	transition: background-color 999999s ease-in-out 0s;
+}
+
+.settings-section.danger-section input[type='password']:autofill {
+	background: var(--color-bg) !important;
+	color: var(--color-text) !important;
+}
+
+.settings-section.danger-section .settings-danger-note {
+	background: color-mix(in srgb, var(--color-danger) 10%, transparent);
+}
+
+.settings-section.danger-section .btn-danger {
+	width: max-content;
+	min-width: 11rem;
+}
+
+@media (max-width: 640px) {
+	.settings-section.danger-section .btn-danger {
+		width: 100%;
+	}
+}
