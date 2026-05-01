@@ -40,12 +40,13 @@
 	function handleSubmit() {
 		saving = true;
 		error = '';
-		return ({ result }: { result: { type: string; data?: Record<string, unknown> } }) => {
+		return ({ result, update }: any) => {
 			saving = false;
 			if (result.type === 'failure') {
-				error = (result.data as { error?: string } | undefined)?.error ?? 'Failed to save.';
+				error = result.data?.error ?? 'Failed to save.';
 			} else if (result.type === 'success') {
 				editing = false;
+				update();
 			}
 		};
 	}
@@ -58,6 +59,18 @@
 			const form = (e.target as HTMLElement).closest('form') as HTMLFormElement | null;
 			form?.requestSubmit();
 		}
+	}
+
+	function handleBlur() {
+		setTimeout(() => {
+			if (!editing) return;
+			if (fieldValue !== value) {
+				const form = inputEl?.closest('form') as HTMLFormElement | null;
+				form?.requestSubmit();
+			} else {
+				cancelEdit();
+			}
+		}, 150);
 	}
 </script>
 
@@ -73,7 +86,7 @@
 				name="value"
 				bind:value={fieldValue}
 				onkeydown={handleKeydown}
-				onblur={() => setTimeout(() => editing && cancelEdit(), 150)}
+				onblur={handleBlur}
 				bind:this={inputEl}
 				{autofocus}
 			/>

@@ -24,4 +24,5 @@ export type PublicProfile = {
 	accentColor: string | null;
 	avatarBackgroundColor: string | null;
 	avatarShape: AvatarShape;
+	settings: Record<string, unknown>;
 };

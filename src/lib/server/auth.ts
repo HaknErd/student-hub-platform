@@ -93,7 +93,8 @@ function mapProfile(row: Record<string, unknown>): PublicProfile {
 		profilePictureUrl: row.profile_picture_url ? String(row.profile_picture_url) : null,
 		accentColor: row.accent_color ? String(row.accent_color) : null,
 		avatarBackgroundColor: row.avatar_background_color ? String(row.avatar_background_color) : null,
-		avatarShape: resolveAvatarShape(settings)
+		avatarShape: resolveAvatarShape(settings),
+		settings
 	};
 }
 
@@ -101,7 +102,7 @@ export async function getPublicProfile(id: string): Promise<PublicProfile | null
 	const result = await db.query(
 		`
 			select id, first_name, last_name, display_name, role,
-				profile_picture_url, accent_color, avatar_background_color
+				profile_picture_url, accent_color, avatar_background_color, settings
 			from users
 			where id = $1
 				and disabled_at is null

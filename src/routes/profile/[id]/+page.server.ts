@@ -141,7 +141,22 @@ export const actions: Actions = {
 		if (!result.ok) {
 			return fail(400, { error: 'Could not update avatar shape.' });
 		}
-
+		
 		return { avatarShape: value };
+	},
+
+	updateSettings: async ({ request, locals, params }) => {
+		if (!locals.user || locals.user.id !== params.id) throw redirect(303, '/login');
+
+		const form = await request.formData();
+		const bio = String(form.get('bio') ?? '').trim();
+
+		const result = await updateUserSettings(locals.user.id, { bio });
+		if (!result.ok) {
+			return fail(400, { error: 'Could not update bio.' });
+		}
+
+		locals.user = { ...locals.user, settings: { ...locals.user.settings, bio } };
+		return { success: true };
 	}
 };

@@ -4,7 +4,7 @@
 	import AvatarEditorModal from '$lib/components/AvatarEditorModal.svelte';
 	import InlineEditableField from '$lib/components/InlineEditableField.svelte';
 
-	let { data, form } = $props();
+	let { data } = $props();
 
 	const PRESET_COLORS = [
 		'#2563eb', '#7c3aed', '#db2777', '#dc2626', '#ea580c',
@@ -13,6 +13,12 @@
 
 	let showAvatarModal = $state(false);
 	let savingAvatar = $state(false);
+	let isEditingProfile = $state(false);
+	let bioValue = $state('');
+
+	$effect(() => {
+		bioValue = String(data.profile.settings?.bio || '');
+	});
 
 	function openAvatarModal() {
 		showAvatarModal = true;
@@ -52,8 +58,8 @@
 	}
 
 	function handleColorSubmit() {
-		return ({ result }: { result: { type: string } }) => {
-			void result;
+		return ({ update }: any) => {
+			update();
 		};
 	}
 
@@ -65,178 +71,205 @@
 			body: formData
 		}).then(() => location.reload());
 	}
+
+	function handleBioSubmit() {
+		return ({ update }: any) => {
+			update();
+		};
+	}
 </script>
 
-<section class="profile-page">
-	<header class="profile-hero-new">
-		<div class="profile-hero-avatar">
-			<Avatar
-				userId={data.profile.id}
-				firstName={data.profile.firstName}
-				lastName={data.profile.lastName}
-				profilePictureUrl={data.profile.profilePictureUrl}
-				accentColor={data.profile.accentColor}
-				avatarBackgroundColor={data.profile.avatarBackgroundColor}
-				avatarShape={data.profile.avatarShape}
-				size="xl"
-				editable={data.isOwnProfile}
-				onclickavatar={data.isOwnProfile ? openAvatarModal : undefined}
-			/>
-		</div>
+<div class="profile-layout">
+	<!-- Banner -->
+	<div
+		class="profile-banner"
+		style="background-color: {data.profile.accentColor || 'var(--color-border)'}"
+	></div>
 
-		<div class="profile-hero-info">
-			<p class="profile-hero-role">{data.profile.role}</p>
-			<h1 class="profile-hero-name">{data.profile.displayName}</h1>
+	<!-- Content Container -->
+	<div class="profile-container">
+		<div class="profile-top-row">
+			<div class="profile-avatar-wrapper">
+				<Avatar
+					userId={data.profile.id}
+					firstName={data.profile.firstName}
+					lastName={data.profile.lastName}
+					profilePictureUrl={data.profile.profilePictureUrl}
+					accentColor={data.profile.accentColor}
+					avatarBackgroundColor={data.profile.avatarBackgroundColor}
+					avatarShape={data.profile.avatarShape}
+					size="xl"
+					editable={data.isOwnProfile}
+					onclickavatar={data.isOwnProfile ? openAvatarModal : undefined}
+				/>
+			</div>
 
 			{#if data.isOwnProfile}
-				<div class="profile-hero-actions">
-					{#if data.profile.profilePictureUrl}
-						<button type="button" class="profile-hero-action-btn" onclick={handleRemoveAvatar}>
-							Remove picture
-						</button>
-					{/if}
-					<div class="profile-hero-shape-toggle">
-						<button
-							type="button"
-							class="profile-shape-btn"
-							class:active={data.profile.avatarShape === 'rounded-xl'}
-							onclick={() => handleAvatarShapeChange('rounded-xl')}
-							aria-label="Square avatar"
-						>
-							<svg width="14" height="14" viewBox="0 0 14 14" fill="currentColor">
-								<rect x="2" y="2" width="10" height="10" rx="2" />
-							</svg>
-						</button>
-						<button
-							type="button"
-							class="profile-shape-btn"
-							class:active={data.profile.avatarShape === 'rounded-full'}
-							onclick={() => handleAvatarShapeChange('rounded-full')}
-							aria-label="Circle avatar"
-						>
-							<svg width="14" height="14" viewBox="0 0 14 14" fill="currentColor">
-								<circle cx="7" cy="7" r="5" />
-							</svg>
-						</button>
-					</div>
+				<div class="profile-actions-wrapper">
+					<button
+						class="btn-ghost"
+						onclick={() => isEditingProfile = !isEditingProfile}
+					>
+						{isEditingProfile ? 'Done' : 'Edit profile'}
+					</button>
+					<a href="/account" class="btn-ghost" aria-label="Settings">
+						<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+							<circle cx="12" cy="12" r="3" />
+							<path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z" />
+						</svg>
+					</a>
 				</div>
 			{/if}
 		</div>
 
-		{#if data.isOwnProfile}
-			<a href="/account" class="btn-ghost">Settings</a>
-		{/if}
-	</header>
-
-	{#if data.isOwnProfile}
-		<div class="profile-grid">
-			<section class="profile-card">
-				<header class="profile-card-header">
-					<h2>Profile</h2>
-					<p>Click any field to edit. Changes save automatically.</p>
-				</header>
-
-				<dl class="field-list-new">
-					<InlineEditableField
-						label="First name"
-						value={data.profile.firstName}
-						field="firstName"
-						action="?/updateField"
-					/>
-
-					<InlineEditableField
-						label="Last name"
-						value={data.profile.lastName}
-						field="lastName"
-						action="?/updateField"
-					/>
-
-					<InlineEditableField
-						label="Email"
-						value={data.ownEmail || ''}
-						field="email"
-						action="?/updateField"
-						type="email"
-					/>
-
-					<div class="inline-edit-row" style="cursor: default">
-						<dt class="inline-edit-label">Role</dt>
-						<dd class="inline-edit-value">{data.profile.role}</dd>
-					</div>
-				</dl>
-			</section>
-
-			<section class="profile-card">
-				<header class="profile-card-header">
-					<h2>Colors</h2>
-					<p>Click a swatch to apply instantly.</p>
-				</header>
-
-				<div class="color-section">
-					<div class="color-field">
-						<p class="color-field-label">Accent color</p>
-						<form method="POST" action="?/updateColor" use:enhance={handleColorSubmit} class="color-picker-form">
-							<input type="hidden" name="colorField" value="accentColor" />
-							{#each PRESET_COLORS as color}
-								<button
-									type="submit"
-									name="value"
-									value={color}
-									class="color-swatch color-swatch-lg"
-									class:active={data.profile.accentColor === color}
-									style="background-color: {color}"
-									aria-label="Accent color {color}"
-								></button>
-							{/each}
-						</form>
+		<!-- View Mode vs Edit Mode -->
+		{#if isEditingProfile}
+			<!-- Editing Mode -->
+			<div class="profile-edit-grid">
+				<div class="profile-edit-section">
+					<h2 class="profile-edit-heading">Personal Details</h2>
+					<div class="field-list-new">
+						<InlineEditableField
+							label="First name"
+							value={data.profile.firstName}
+							field="firstName"
+							action="?/updateField"
+						/>
+						<InlineEditableField
+							label="Last name"
+							value={data.profile.lastName}
+							field="lastName"
+							action="?/updateField"
+						/>
+						<InlineEditableField
+							label="Email"
+							value={data.ownEmail || ''}
+							field="email"
+							action="?/updateField"
+							type="email"
+						/>
+						<div class="inline-edit-row" style="cursor: default">
+							<dt class="inline-edit-label">Role</dt>
+							<dd class="inline-edit-value">{data.profile.role}</dd>
+						</div>
 					</div>
 
-					<div class="color-field">
-						<p class="color-field-label">Avatar background</p>
-						<form method="POST" action="?/updateColor" use:enhance={handleColorSubmit} class="color-picker-form">
-							<input type="hidden" name="colorField" value="avatarBackgroundColor" />
-							{#each PRESET_COLORS as color}
-								<button
-									type="submit"
-									name="value"
-									value={color}
-									class="color-swatch color-swatch-lg"
-									class:active={data.profile.avatarBackgroundColor === color}
-									style="background-color: {color}"
-									aria-label="Avatar color {color}"
-								></button>
-							{/each}
+					<!-- Bio Edit -->
+					<div class="bio-edit-group">
+						<label for="bio-input" class="inline-edit-label block mb-1">Description (Bio)</label>
+						<form method="POST" action="?/updateSettings" use:enhance={handleBioSubmit}>
+							<textarea
+								id="bio-input"
+								name="bio"
+								rows="3"
+								class="profile-bio-textarea"
+								placeholder="Add a bio to your profile..."
+								bind:value={bioValue}
+							></textarea>
+							<div class="flex justify-end mt-2">
+								<button type="submit" class="btn" style="padding: 0.25rem 0.75rem; font-size: 0.75rem;">Save Bio</button>
+							</div>
 						</form>
 					</div>
 				</div>
-			</section>
-		</div>
-	{:else}
-		<div class="profile-grid">
-			<section class="profile-card">
-				<header class="profile-card-header">
-					<h2>Profile</h2>
-					<p>Basic account details visible inside Student Hub.</p>
-				</header>
 
-				<dl class="field-list-new">
-					<div class="inline-edit-row">
-						<dt class="inline-edit-label">First name</dt>
-						<dd class="inline-edit-value">{data.profile.firstName}</dd>
+				<div class="profile-edit-section">
+					<h2 class="profile-edit-heading">Profile Customization</h2>
+					
+					{#if data.profile.profilePictureUrl}
+						<div class="mb-4">
+							<button type="button" class="text-sm text-danger hover:underline" onclick={handleRemoveAvatar}>
+								Remove profile picture
+							</button>
+						</div>
+					{/if}
+
+					<div class="mb-5">
+						<p class="inline-edit-label mb-2">Avatar Shape</p>
+						<div class="profile-hero-shape-toggle inline-flex">
+							<button
+								type="button"
+								class="profile-shape-btn"
+								class:active={data.profile.avatarShape === 'rounded-xl'}
+								onclick={() => handleAvatarShapeChange('rounded-xl')}
+								aria-label="Square avatar"
+							>
+								<svg width="14" height="14" viewBox="0 0 14 14" fill="currentColor">
+									<rect x="2" y="2" width="10" height="10" rx="2" />
+								</svg>
+							</button>
+							<button
+								type="button"
+								class="profile-shape-btn"
+								class:active={data.profile.avatarShape === 'rounded-full'}
+								onclick={() => handleAvatarShapeChange('rounded-full')}
+								aria-label="Circle avatar"
+							>
+								<svg width="14" height="14" viewBox="0 0 14 14" fill="currentColor">
+									<circle cx="7" cy="7" r="5" />
+								</svg>
+							</button>
+						</div>
 					</div>
-					<div class="inline-edit-row">
-						<dt class="inline-edit-label">Last name</dt>
-						<dd class="inline-edit-value">{data.profile.lastName}</dd>
+
+					<div class="color-section">
+						<div class="color-field">
+							<p class="inline-edit-label mb-2">Accent color</p>
+							<form method="POST" action="?/updateColor" use:enhance={handleColorSubmit} class="color-picker-form">
+								<input type="hidden" name="colorField" value="accentColor" />
+								{#each PRESET_COLORS as color}
+									<button
+										type="submit"
+										name="value"
+										value={color}
+										class="color-swatch color-swatch-md"
+										class:active={data.profile.accentColor === color}
+										style="background-color: {color}"
+										aria-label="Accent color {color}"
+									></button>
+								{/each}
+							</form>
+						</div>
+
+						<div class="color-field">
+							<p class="inline-edit-label mb-2">Avatar background</p>
+							<form method="POST" action="?/updateColor" use:enhance={handleColorSubmit} class="color-picker-form">
+								<input type="hidden" name="colorField" value="avatarBackgroundColor" />
+								{#each PRESET_COLORS as color}
+									<button
+										type="submit"
+										name="value"
+										value={color}
+										class="color-swatch color-swatch-md"
+										class:active={data.profile.avatarBackgroundColor === color}
+										style="background-color: {color}"
+										aria-label="Avatar color {color}"
+									></button>
+								{/each}
+							</form>
+						</div>
 					</div>
-					<div class="inline-edit-row">
-						<dt class="inline-edit-label">Role</dt>
-						<dd class="inline-edit-value">{data.profile.role}</dd>
+				</div>
+			</div>
+		{:else}
+			<!-- View Mode -->
+			<div class="profile-info">
+				<h1 class="profile-name">{data.profile.displayName}</h1>
+				<p class="profile-role">{data.profile.role}</p>
+				
+				{#if data.profile.settings?.bio}
+					<div class="profile-bio-text">
+						{data.profile.settings.bio}
 					</div>
-				</dl>
-			</section>
-		</div>
-	{/if}
-</section>
+				{:else if data.isOwnProfile}
+					<div class="profile-bio-empty">
+						No description yet. <button type="button" class="text-primary hover:underline" onclick={() => isEditingProfile = true}>Add a bio</button>
+					</div>
+				{/if}
+			</div>
+		{/if}
+	</div>
+</div>
 
 {#if showAvatarModal}
 	<AvatarEditorModal

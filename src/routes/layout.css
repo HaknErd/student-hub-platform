@@ -649,82 +649,114 @@
 	}
 
 	/* ============================================
-	   NEW COMPONENTS — PROFILE PAGE
+	   NEW COMPONENTS — PROFILE PAGE (TWITTER STYLE)
 	   ============================================ */
 
-	.profile-page {
-		@apply grid gap-8;
+	.profile-layout {
+		@apply relative bg-surface border border-border rounded-2xl overflow-hidden mb-12;
 	}
 
-	.profile-hero-new {
-		@apply flex flex-col items-start gap-5 rounded-2xl border border-border bg-surface p-6 sm:flex-row sm:items-center;
+	.profile-banner {
+		@apply h-32 sm:h-48 w-full bg-border;
 	}
 
-	.profile-hero-avatar {
-		@apply shrink-0;
+	.profile-container {
+		@apply px-4 sm:px-6 pb-6 relative;
 	}
 
-	.profile-hero-info {
-		@apply min-w-0 flex-1;
+	.profile-top-row {
+		@apply flex justify-between items-end relative -mt-16 sm:-mt-20 mb-4;
 	}
 
-	.profile-hero-role {
-		@apply text-xs font-semibold uppercase tracking-wide text-text-muted;
+	.profile-avatar-wrapper {
+		@apply rounded-xl sm:rounded-2xl border-4 border-surface bg-surface shadow-sm inline-block;
+		& :global(.avatar) {
+			@apply w-24 h-24 sm:w-32 sm:h-32 text-3xl sm:text-4xl;
+		}
 	}
 
-	.profile-hero-name {
-		@apply mt-1 text-2xl sm:text-3xl font-semibold tracking-tight text-text;
+	.profile-actions-wrapper {
+		@apply flex items-center gap-2 mb-2 sm:mb-4;
+		.btn-ghost {
+			@apply bg-bg px-4 py-1.5 rounded-full text-sm font-semibold border-border shadow-sm text-text transition-colors;
+			&:hover {
+				@apply bg-border border-border text-text;
+			}
+		}
 	}
 
-	.profile-hero-actions {
-		@apply mt-3 flex items-center gap-3 flex-wrap;
+	.profile-info {
+		@apply mt-2 mb-4;
 	}
 
-	.profile-hero-action-btn {
-		@apply text-xs text-text-muted underline underline-offset-2;
-		&:hover { @apply text-danger; }
+	.profile-name {
+		@apply text-xl sm:text-2xl font-bold text-text tracking-tight;
+	}
+
+	.profile-role {
+		@apply text-sm font-medium text-text-muted uppercase tracking-wide mt-0.5;
+	}
+
+	.profile-bio-text {
+		@apply mt-4 text-sm sm:text-base text-text whitespace-pre-wrap leading-relaxed max-w-prose;
+	}
+
+	.profile-bio-empty {
+		@apply mt-4 text-sm text-text-muted italic;
+	}
+
+	/* ---- Profile Editing Mode ---- */
+	.profile-edit-grid {
+		@apply grid gap-8 md:grid-cols-2 mt-4 pt-6 border-t border-border;
+	}
+
+	.profile-edit-section {
+		@apply flex flex-col gap-4;
+	}
+
+	.profile-edit-heading {
+		@apply text-sm font-bold uppercase tracking-wider text-text-muted mb-2;
+	}
+
+	.bio-edit-group {
+		@apply mt-4;
+	}
+
+	.profile-bio-textarea {
+		@apply w-full rounded-xl border border-border bg-bg px-3 py-2 text-sm text-text outline-none resize-y transition-colors;
+		&:focus {
+			@apply border-primary ring-2 ring-primary/20;
+		}
 	}
 
 	.profile-hero-shape-toggle {
-		@apply flex items-center gap-1 rounded-md border border-border bg-bg p-1;
+		@apply inline-flex items-center gap-1 rounded-lg border border-border bg-bg p-1;
 	}
 
 	.profile-shape-btn {
-		@apply flex items-center justify-center w-7 h-7 rounded text-text-muted transition-colors;
+		@apply flex items-center justify-center w-8 h-8 rounded-md text-text-muted transition-colors cursor-pointer;
 		&:hover { @apply bg-surface text-text; }
-		&.active { @apply bg-primary text-white; }
+		&.active { @apply bg-primary text-white shadow-sm; }
 	}
 
-	.profile-grid {
-		@apply grid gap-6 lg:grid-cols-2;
+	.color-swatch-md {
+		@apply w-8 h-8 rounded-lg border-2 border-transparent cursor-pointer transition-transform;
+		&:hover { @apply shadow-md scale-110; }
+		&.active { @apply border-white ring-2 ring-primary ring-offset-1 ring-offset-surface; }
 	}
 
-	.profile-card {
-		@apply rounded-2xl border border-border bg-surface p-6;
-	}
-
-	.profile-card-header {
-		@apply border-b border-border pb-4 mb-5;
-		h2 {
-			@apply text-base font-semibold text-text;
-		}
-		p {
-			@apply mt-1 text-sm text-text-muted;
-		}
-	}
-
-	/* ---- Inline editable fields (new) ---- */
+	/* ---- Inline editable fields (retained for profile edit mode) ---- */
 	.field-list-new {
-		@apply grid gap-1;
+		@apply grid gap-1 bg-bg border border-border rounded-xl p-2;
 	}
 
 	.inline-edit-row {
-		@apply w-full text-left rounded-lg border border-transparent p-3 -mx-3 transition-colors;
+		@apply w-full text-left rounded-lg border border-transparent p-3 transition-colors;
 		&:not(.editing):hover {
-			@apply border-border bg-bg cursor-pointer;
+			@apply border-border bg-surface cursor-pointer;
 		}
 		&.editing {
-			@apply border-primary/30 bg-bg cursor-default;
+			@apply border-primary/30 bg-surface cursor-default shadow-sm;
 		}
 	}
 
@@ -753,25 +785,15 @@
 
 	/* ---- Color sections (new) ---- */
 	.color-section {
-		@apply grid gap-6;
+		@apply grid gap-5 bg-bg border border-border rounded-xl p-4;
 	}
 
 	.color-field {
 		@apply grid gap-2;
 	}
 
-	.color-field-label {
-		@apply text-xs font-semibold uppercase text-text-muted;
-	}
-
 	.color-picker-form {
 		@apply flex flex-wrap gap-2;
-	}
-
-	.color-swatch-lg {
-		@apply w-9 h-9 rounded-lg border-2 border-transparent cursor-pointer transition-all;
-		&:hover { @apply shadow-md scale-110; }
-		&.active { @apply border-white ring-2 ring-primary ring-offset-1 ring-offset-surface; }
 	}
 
 	/* ============================================
