@@ -3,6 +3,7 @@ import type { Actions, PageServerLoad } from './$types';
 import {
 	getPublicProfile,
 	updateUserProfile,
+	updateUserRole,
 	saveAvatar,
 	removeAvatar,
 	saveBanner,
@@ -31,11 +32,39 @@ export const load: PageServerLoad = async ({ params, locals }) => {
 		isOwnProfile: locals.user?.id === profile.id,
 		ownEmail: locals.user?.id === profile.id ? locals.user.email : null,
 		canEditEmail: locals.user?.role === 'admin',
+		canManageRole: locals.user?.role === 'admin' && locals.user.id !== profile.id,
+		roleOptions: ['student', 'prefect', 'teacher', 'admin'],
 		submittedResources
 	};
 };
 
 export const actions: Actions = {
+	updateRole: async (event) => {
+		if (!isTrustedPost(event)) return fail(403, { error: 'Invalid request origin.' });
+
+		const { request, locals, params } = event;
+		if (!locals.user) throw redirect(303, '/login');
+
+		const form = await request.formData();
+		const role = String(form.get('role') ?? '');
+
+		const result = await updateUserRole(locals.user.id, params.id, role);
+
+		if (!result.ok) {
+			const messages: Record<string, string> = {
+				invalid_input: 'Select a valid role.',
+				forbidden: 'You are not allowed to change this role.',
+				not_found: 'User not found.'
+			};
+
+			return fail(result.reason === 'forbidden' ? 403 : 400, {
+				error: messages[result.reason] ?? 'Could not update role.'
+			});
+		}
+
+		return { roleUpdated: true, role };
+	},
+
 	updateField: async (event) => {
 		if (!isTrustedPost(event)) return fail(403, { error: 'Invalid request origin.' });
 

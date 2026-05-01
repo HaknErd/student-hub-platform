@@ -1,6 +1,14 @@
 import { error, fail, redirect } from '@sveltejs/kit';
 import type { Actions, PageServerLoad } from './$types';
-import { getResourceById, isModerator, submitResourceRevision, updateOwnSubmission, updateResourceByModerator } from '$lib/server/resources';
+import {
+	binResource,
+	getResourceById,
+	isModerator,
+	permanentlyDeleteResource,
+	submitResourceRevision,
+	updateOwnSubmission,
+	updateResourceByModerator
+} from '$lib/server/resources';
 import { isTrustedPost } from '$lib/server/request';
 
 export const load: PageServerLoad = async ({ params, locals }) => {
@@ -12,11 +20,56 @@ export const load: PageServerLoad = async ({ params, locals }) => {
 	return {
 		resource,
 		canModerate: isModerator(locals.user),
-		canEditResource: isModerator(locals.user) || locals.user.id === resource.createdBy.id
+		canEditResource: isModerator(locals.user) || locals.user.id === resource.createdBy.id,
+		canBinResource: isModerator(locals.user) || locals.user.id === resource.createdBy.id,
+		canPermanentDeleteResource: locals.user.role === 'admin'
 	};
 };
 
 export const actions: Actions = {
+	binResource: async (event) => {
+		if (!isTrustedPost(event)) return fail(403, { error: 'Invalid request origin.' });
+		if (!event.locals.user) throw redirect(303, '/login');
+
+		const result = await binResource(event.params.id, event.locals.user);
+
+		if (!result.ok) {
+			return fail(result.reason === 'forbidden' ? 403 : 400, {
+				error:
+					result.reason === 'forbidden'
+						? 'You are not allowed to bin this resource.'
+						: 'Resource not found.'
+			});
+		}
+
+		throw redirect(303, '/resources');
+	},
+
+	permanentDeleteResource: async (event) => {
+		if (!isTrustedPost(event)) return fail(403, { error: 'Invalid request origin.' });
+		if (!event.locals.user) throw redirect(303, '/login');
+
+		const form = await event.request.formData();
+		const confirm = String(form.get('confirm') ?? '');
+
+		if (confirm !== 'DELETE') {
+			return fail(400, { error: 'Type DELETE to permanently delete this resource.' });
+		}
+
+		const result = await permanentlyDeleteResource(event.params.id, event.locals.user);
+
+		if (!result.ok) {
+			return fail(result.reason === 'forbidden' ? 403 : 400, {
+				error:
+					result.reason === 'forbidden'
+						? 'Only admins can permanently delete resources.'
+						: 'Resource not found.'
+			});
+		}
+
+		throw redirect(303, '/resources');
+	},
+
 	updateResource: async (event) => {
 		if (!isTrustedPost(event)) return fail(403, { error: 'Invalid request origin.' });
 		if (!event.locals.user) throw redirect(303, '/login');

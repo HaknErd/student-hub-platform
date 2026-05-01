@@ -30,6 +30,7 @@ const avatarsDir = join(storageRoot, 'avatars');
 const bannersDir = join(storageRoot, 'banners');
 const HEX_COLOR_RE = /^#[0-9a-fA-F]{6}$/;
 const ALLOWED_USER_SETTING_KEYS = new Set(['theme', 'compactMode', 'avatarShape', 'bio']);
+const ALLOWED_ROLES = new Set(['student', 'prefect', 'teacher', 'admin']);
 
 function normalizeEmail(email: string) {
 	return email.trim().toLowerCase();
@@ -132,6 +133,46 @@ export async function getPublicProfile(id: string): Promise<PublicProfile | null
 
 	if (result.rowCount !== 1) return null;
 	return mapProfile(result.rows[0]);
+}
+
+export async function updateUserRole(
+	actorId: string,
+	targetUserId: string,
+	role: string
+): Promise<{ ok: true } | { ok: false; reason: 'invalid_input' | 'forbidden' | 'not_found' }> {
+	if (actorId === targetUserId) return { ok: false, reason: 'forbidden' };
+	if (!ALLOWED_ROLES.has(role)) return { ok: false, reason: 'invalid_input' };
+
+	const actor = await db.query(
+		`
+			select id
+			from users
+			where id = $1
+				and role = 'admin'
+				and disabled_at is null
+			limit 1
+		`,
+		[actorId]
+	);
+
+	if (actor.rowCount !== 1) return { ok: false, reason: 'forbidden' };
+
+	const result = await db.query(
+		`
+			update users
+			set role = $2,
+				updated_at = now()
+			where id = $1
+				and disabled_at is null
+			returning id
+		`,
+		[targetUserId, role]
+	);
+
+	if (result.rowCount !== 1) return { ok: false, reason: 'not_found' };
+
+	await writeAudit(actorId, 'user.role.update', 'user', targetUserId, { role });
+	return { ok: true };
 }
 
 export async function updateUserProfile(
@@ -708,9 +749,11 @@ export async function searchProfiles(query: string, limit = 20): Promise<SearchR
 				similarity(first_name, $${i + 1}) > 0.15
 				or similarity(last_name, $${i + 1}) > 0.15
 				or similarity(display_name, $${i + 1}) > 0.15
+				or similarity(email, $${i + 1}) > 0.15
 				or first_name ilike $${terms.length + 1}
 				or last_name ilike $${terms.length + 1}
 				or display_name ilike $${terms.length + 1}
+				or email ilike $${terms.length + 1}
 			)
 		`)
 		.join(' or ');
@@ -725,7 +768,8 @@ export async function searchProfiles(query: string, limit = 20): Promise<SearchR
 				greatest(
 					similarity(first_name, $${terms.length + 2}),
 					similarity(last_name, $${terms.length + 2}),
-					similarity(display_name, $${terms.length + 2})
+					similarity(display_name, $${terms.length + 2}),
+					similarity(email, $${terms.length + 2})
 				) as similarity
 			from users
 			where disabled_at is null
@@ -783,9 +827,11 @@ export async function searchProfilesPaged(
 			first_name ilike $1
 			or last_name ilike $1
 			or display_name ilike $1
+			or email ilike $1
 			or similarity(first_name, $2) > 0.15
 			or similarity(last_name, $2) > 0.15
 			or similarity(display_name, $2) > 0.15
+			or similarity(email, $2) > 0.15
 		)
 	`;
 
@@ -813,7 +859,8 @@ export async function searchProfilesPaged(
 					greatest(
 					similarity(first_name, $2),
 					similarity(last_name, $2),
-					similarity(display_name, $2)
+					similarity(display_name, $2),
+					similarity(email, $2)
 				) as similarity
 				from users
 				where ${whereSql}

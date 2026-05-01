@@ -1153,6 +1153,122 @@ export async function rejectResource(id: string, moderator: User, reason: string
 	return { ok: true as const };
 }
 
+export async function binResource(
+	id: string,
+	actor: User
+): Promise<{ ok: true } | { ok: false; reason: 'forbidden' | 'not_found' }> {
+	const existing = await db.query(
+		`
+			select id, created_by
+			from resources
+			where id = $1
+				and deleted_at is null
+			limit 1
+		`,
+		[id]
+	);
+
+	if (existing.rowCount !== 1) return { ok: false, reason: 'not_found' };
+
+	const createdBy = String(existing.rows[0].created_by);
+	if (createdBy !== actor.id && !isModerator(actor)) {
+		return { ok: false, reason: 'forbidden' };
+	}
+
+	const result = await db.query(
+		`
+			update resources
+			set status = 'deleted',
+				deleted_at = now(),
+				updated_at = now()
+			where id = $1
+				and deleted_at is null
+			returning id
+		`,
+		[id]
+	);
+
+	if (result.rowCount !== 1) return { ok: false, reason: 'not_found' };
+
+	await writeAudit(actor.id, 'resource.bin', 'resource', id, {});
+	return { ok: true };
+}
+
+export async function permanentlyDeleteResource(
+	id: string,
+	actor: User
+): Promise<{ ok: true } | { ok: false; reason: 'forbidden' | 'not_found' }> {
+	if (actor.role !== 'admin') return { ok: false, reason: 'forbidden' };
+
+	const client = await db.connect();
+	const objectKeys: string[] = [];
+
+	try {
+		await client.query('begin');
+
+		const existing = await client.query(
+			`
+				select id
+				from resources
+				where id = $1
+				limit 1
+			`,
+			[id]
+		);
+
+		if (existing.rowCount !== 1) {
+			await client.query('rollback');
+			return { ok: false, reason: 'not_found' };
+		}
+
+		const files = await client.query(
+			`
+				select object_key
+				from resource_files
+				where resource_id = $1
+			`,
+			[id]
+		);
+
+		for (const row of files.rows) {
+			objectKeys.push(String(row.object_key));
+		}
+
+		await client.query(
+			`
+				update resources
+				set revision_of = null
+				where revision_of = $1
+			`,
+			[id]
+		);
+
+		await client.query('delete from resource_files where resource_id = $1', [id]);
+		await client.query('delete from resources where id = $1', [id]);
+
+		await client.query('commit');
+	} catch (error) {
+		try {
+			await client.query('rollback');
+		} catch {
+			// ignore rollback failures
+		}
+		throw error;
+	} finally {
+		client.release();
+	}
+
+	for (const objectKey of objectKeys) {
+		await deleteStoredFile(objectKey);
+	}
+
+	await writeAudit(actor.id, 'resource.permanent_delete', 'resource', id, {
+		fileCount: objectKeys.length
+	});
+	return { ok: true };
+}
+
+
 export async function getResourceFileForDownload(fileId: string, user: User | null) {
 	const result = await db.query(
 		`

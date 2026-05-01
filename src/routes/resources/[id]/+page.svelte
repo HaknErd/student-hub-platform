@@ -4,6 +4,8 @@
 	const resource = $derived(data.resource);
 
 	let editing = $state(false);
+	let showPermanentDelete = $state(false);
+	let permanentDeleteConfirm = $state('');
 
 	const subjects = [
 		'Maths',
@@ -303,4 +305,70 @@
 			<span>Verified by {resource.verifiedBy.displayName}</span>
 		{/if}
 	</footer>
+
+	{#if data.canBinResource || data.canPermanentDeleteResource}
+		<section class="resource-danger-zone">
+			<div>
+				<p class="settings-eyebrow">Danger zone</p>
+				<h2>Remove resource</h2>
+				<p>
+					Binning hides the resource from normal pages. Permanent deletion removes the database record and uploaded files.
+				</p>
+			</div>
+
+			<div class="resource-danger-actions">
+				{#if data.canBinResource}
+					<form method="POST" action="?/binResource">
+						<button class="btn-ghost danger-text" type="submit">
+							Move to bin
+						</button>
+					</form>
+				{/if}
+
+				{#if data.canPermanentDeleteResource}
+					{#if showPermanentDelete}
+						<form method="POST" action="?/permanentDeleteResource" class="resource-permanent-delete-form">
+							<label>
+								<span>Type DELETE to confirm</span>
+								<input
+									name="confirm"
+									autocomplete="off"
+									bind:value={permanentDeleteConfirm}
+								/>
+							</label>
+
+							<div class="resource-detail-form-actions">
+								<button
+									class="btn btn-danger"
+									type="submit"
+									disabled={permanentDeleteConfirm !== 'DELETE'}
+								>
+									Permanently delete
+								</button>
+
+								<button
+									class="btn-ghost"
+									type="button"
+									onclick={() => {
+										showPermanentDelete = false;
+										permanentDeleteConfirm = '';
+									}}
+								>
+									Cancel
+								</button>
+							</div>
+						</form>
+					{:else}
+						<button
+							class="btn btn-danger"
+							type="button"
+							onclick={() => (showPermanentDelete = true)}
+						>
+							Permanent delete
+						</button>
+					{/if}
+				{/if}
+			</div>
+		</section>
+	{/if}
 </section>
