@@ -56,8 +56,8 @@ export const EMPTY_HOVER_MEMORY = 560;
 
 export const TEXT_SAMPLE_MAIN_STEP_X = 3;
 export const TEXT_SAMPLE_MAIN_STEP_Y = 4;
-export const TEXT_SAMPLE_SIGNATURE_STEP_X = 2;
-export const TEXT_SAMPLE_SIGNATURE_STEP_Y = 2;
+export const TEXT_SAMPLE_SIGNATURE_STEP_X = 1;
+export const TEXT_SAMPLE_SIGNATURE_STEP_Y = 1;
 
 export const MOBILE_TITLE_TOP_Y = 0.29;
 export const MOBILE_TITLE_LINE_GAP_Y = 0.15;
@@ -68,14 +68,14 @@ export const MOBILE_RIGHT_PADDING = 8;
 
 export const MOBILE_TEXT_SAMPLE_MAIN_STEP_X = 3;
 export const MOBILE_TEXT_SAMPLE_MAIN_STEP_Y = 4;
-export const MOBILE_TEXT_SAMPLE_SIGNATURE_STEP_X = 2;
-export const MOBILE_TEXT_SAMPLE_SIGNATURE_STEP_Y = 2;
+export const MOBILE_TEXT_SAMPLE_SIGNATURE_STEP_X = 1;
+export const MOBILE_TEXT_SAMPLE_SIGNATURE_STEP_Y = 1;
 
 export const VISUAL_EVENT_KINDS: VisualEventKind[] = ['letter-swap', 'color-life'];
-export const VISUAL_EVENT_MIN_GAP = 5200;
-export const VISUAL_EVENT_MAX_GAP = 11800;
+export const VISUAL_EVENT_MIN_GAP = 2400;
+export const VISUAL_EVENT_MAX_GAP = 5600;
 
-export const LETTER_SWAP_DURATION = 4300;
+export const LETTER_SWAP_DURATION = 1250;
 export const LETTER_SWAP_MIN_TARGETS = 1;
 export const LETTER_SWAP_MAX_TARGETS = 5;
 export const LETTER_SWAP_IN_END = 0.28;
@@ -84,7 +84,7 @@ export const LETTER_SWAP_OUT_END = 1;
 export const LETTER_SWAP_TRANSITION_BLOCK_CHANCE = 0.42;
 export const LETTER_SWAP_REPLACEMENT_GLYPHS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789{}[]<>#$%+=:;';
 
-export const COLOR_LIFE_DURATION = 6200;
+export const COLOR_LIFE_DURATION = 7200;
 export const COLOR_LIFE_MIN_ORIGINS = 1;
 export const COLOR_LIFE_MAX_ORIGINS = 6;
 export const COLOR_LIFE_WAVE_SPEED = 0.021;
@@ -92,6 +92,10 @@ export const COLOR_LIFE_WAVE_WIDTH = 6.8;
 export const COLOR_LIFE_DISTANCE_DECAY = 0.9;
 export const COLOR_LIFE_MIN_STRENGTH = 0.55;
 export const COLOR_LIFE_MAX_STRENGTH = 0.95;
+export const COLOR_LIFE_STEP_MS = 82;
+export const COLOR_LIFE_HANDOFF = 0.975;
+export const COLOR_LIFE_MIN_ENERGY = 0.055;
+export const COLOR_LIFE_BRANCH_CHANCE = 0.88;
 
 export const NORMAL_GLYPH_POOL = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ{}[]<>/\\+=:;._-#$%';
 

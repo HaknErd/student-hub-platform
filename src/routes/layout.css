@@ -4252,3 +4252,260 @@
 		width: 100%;
 	}
 }
+
+/* ---- Prevent PC-only horizontal page overflow ---- */
+@layer base {
+	html,
+	body {
+		max-width: 100%;
+		overflow-x: clip;
+	}
+
+	@supports not (overflow-x: clip) {
+		html,
+		body {
+			overflow-x: hidden;
+		}
+	}
+}
+
+.app-shell,
+.app-main,
+.page-container {
+	min-width: 0;
+	max-width: 100%;
+}
+
+
+/* ---- Global horizontal scroll guard ---- */
+html,
+body {
+	overflow-x: hidden;
+}
+
+.app-shell,
+.app-main,
+.page-container {
+	max-width: 100%;
+}
+
+
+/* ---- TextFieldHero intro sync patch ---- */
+html,
+body,
+.app-shell {
+	max-width: 100%;
+	overflow-x: clip;
+}
+
+@supports not (overflow: clip) {
+	html,
+	body,
+	.app-shell {
+		overflow-x: hidden;
+	}
+}
+
+.terminal-field {
+	background: #000 !important;
+	z-index: 0;
+}
+
+.hero-reveal-target,
+[data-hero-reveal] {
+	position: relative;
+	z-index: 2;
+	opacity: 0;
+	filter: blur(14px);
+	transform: translate3d(0, 10px, 0);
+	pointer-events: none;
+	animation: none !important;
+	transition: none !important;
+	will-change: opacity, filter, transform;
+}
+
+html.hero-intro-done .hero-reveal-target,
+html.hero-intro-done [data-hero-reveal] {
+	opacity: 1;
+	filter: none;
+	transform: none;
+	pointer-events: auto;
+}
+
+
+/* ---- Hero intro synced reveal: no pop-in, no fly-in, no brightness overshoot ---- */
+.hero-reveal-target,
+[data-hero-reveal] {
+	will-change: opacity, filter, transform;
+	animation: none !important;
+	transition: none !important;
+}
+
+html,
+body,
+.app-shell {
+	max-width: 100%;
+	overflow-x: clip;
+}
+
+@supports not (overflow: clip) {
+	html,
+	body,
+	.app-shell {
+		overflow-x: hidden;
+	}
+}
+
+
+/* ---- Final hero intro: black -> type -> helix -> synced light fade ---- */
+.hero-reveal-target,
+[data-hero-reveal] {
+	animation: none !important;
+	transition: none !important;
+	will-change: opacity, filter, transform;
+}
+
+html,
+body,
+.app-shell {
+	max-width: 100%;
+	overflow-x: clip;
+}
+
+@supports not (overflow: clip) {
+	html,
+	body,
+	.app-shell {
+		overflow-x: hidden;
+	}
+}
+
+
+/* ---- Hero intro final: canvas is independent; real UI reveals uniformly ---- */
+html.hero-intro-active {
+	--hero-page-reveal: 0;
+	--hero-page-blur: 10px;
+	--hero-page-y: 10px;
+}
+
+html.hero-intro-active:not(.hero-intro-done) :where(
+	.site-header,
+	.site-footer,
+	.hero-reveal-target,
+	[data-hero-reveal],
+	.home > :not(.terminal-field):not(:has(.terminal-field))
+) {
+	opacity: var(--hero-page-reveal) !important;
+	filter: blur(var(--hero-page-blur)) !important;
+	transform: translate3d(0, var(--hero-page-y), 0) !important;
+	pointer-events: none !important;
+	animation: none !important;
+	transition: none !important;
+	will-change: opacity, filter, transform;
+}
+
+html.hero-intro-active:not(.hero-intro-done) body *:not(canvas) {
+	animation: none !important;
+	transition: none !important;
+}
+
+html.hero-intro-done :where(
+	.site-header,
+	.site-footer,
+	.hero-reveal-target,
+	[data-hero-reveal],
+	.home > :not(.terminal-field):not(:has(.terminal-field))
+) {
+	opacity: 1 !important;
+	filter: none !important;
+	transform: none !important;
+	pointer-events: auto !important;
+}
+
+.terminal-field,
+.terminal-field canvas {
+	opacity: 1 !important;
+	filter: none !important;
+	transform: none !important;
+}
+
+
+
+html,
+body,
+.app-shell {
+	max-width: 100%;
+	overflow-x: clip;
+}
+
+@supports not (overflow: clip) {
+	html,
+	body,
+	.app-shell {
+		overflow-x: hidden;
+	}
+}
+
+
+/* Final hero reveal clamp backup: opacity/blur only, never brightness. */
+html.hero-intro-active .site-header,
+html.hero-intro-active .site-footer,
+html.hero-intro-active .terminal-actions,
+html.hero-intro-active .terminal-intro,
+html.hero-intro-active .hero-reveal-target,
+html.hero-intro-active [data-hero-reveal] {
+	opacity: clamp(0, var(--hero-page-reveal, 0), 1) !important;
+	filter: blur(var(--hero-page-blur, 10px)) !important;
+	transform: translate3d(0, 0, 0) !important;
+	pointer-events: none !important;
+	animation: none !important;
+	transition: none !important;
+}
+
+html.hero-intro-active.hero-intro-done .site-header,
+html.hero-intro-active.hero-intro-done .site-footer,
+html.hero-intro-active.hero-intro-done .terminal-actions,
+html.hero-intro-active.hero-intro-done .terminal-intro,
+html.hero-intro-active.hero-intro-done .hero-reveal-target,
+html.hero-intro-active.hero-intro-done [data-hero-reveal] {
+	opacity: 1 !important;
+	filter: none !important;
+	transform: translate3d(0, 0, 0) !important;
+	pointer-events: auto !important;
+}
+
+
+/* ---- Hero intro: ALL page content reveals together, opacity+blur only ---- */
+html.hero-intro-active .site-header,
+html.hero-intro-active .site-footer,
+html.hero-intro-active .app-main,
+html.hero-intro-active .hero-reveal-target,
+html.hero-intro-active [data-hero-reveal] {
+	opacity: var(--hero-page-reveal, 0) !important;
+	filter: blur(var(--hero-page-blur, 8px)) !important;
+	transform: none !important;
+	pointer-events: none !important;
+	animation: none !important;
+	transition: none !important;
+	will-change: opacity, filter;
+}
+
+html.hero-intro-active.hero-intro-done .site-header,
+html.hero-intro-active.hero-intro-done .site-footer,
+html.hero-intro-active.hero-intro-done .app-main,
+html.hero-intro-active.hero-intro-done .hero-reveal-target,
+html.hero-intro-active.hero-intro-done [data-hero-reveal] {
+	opacity: 1 !important;
+	filter: none !important;
+	transform: none !important;
+	pointer-events: auto !important;
+	animation: unset;
+	transition: unset;
+}
+
+
+/* Overflow guard */
+html, body, .app-shell {
+	max-width: 100%;
+	overflow-x: clip;
+}

@@ -24,7 +24,6 @@
 	<TextFieldHero signature={accessName} />
 
 	<div class="terminal-vignette"></div>
-	<div class="terminal-intro" aria-hidden="true"></div>
 
 	<div class="terminal-actions" aria-label="Primary actions">
 		<a href="/resources">Resources</a>
@@ -123,22 +122,6 @@
 			linear-gradient(180deg, rgba(22, 23, 19, 0.08) 0%, rgba(22, 23, 19, 0.24) 100%);
 	}
 
-	.terminal-intro {
-		position: fixed;
-		inset: 0;
-		z-index: 40;
-		display: grid;
-		place-items: center;
-		overflow: hidden;
-		pointer-events: none;
-		background:
-			linear-gradient(90deg, rgba(242, 241, 236, 0.08) 1px, transparent 1px),
-			linear-gradient(180deg, rgba(242, 241, 236, 0.07) 1px, transparent 1px),
-			linear-gradient(180deg, rgba(22, 23, 19, 0.42), rgba(22, 23, 19, 0.78)),
-			#161713;
-		background-size: 6px 8px, 6px 8px, auto, auto;
-		animation: terminal-intro-away 920ms cubic-bezier(0.68, 0, 0.2, 1) 620ms both;
-	}
 
 	.terminal-actions {
 		position: absolute;
@@ -190,16 +173,6 @@
 		}
 	}
 
-	@keyframes terminal-intro-away {
-		from {
-			opacity: 1;
-			clip-path: inset(0 0 0 0);
-		}
-		to {
-			opacity: 0;
-			clip-path: inset(0 0 100% 0);
-		}
-	}
 
 	@media (max-width: 1023px) {
 		.student-terminal-home {
@@ -212,10 +185,6 @@
 	}
 
 	@media (prefers-reduced-motion: reduce) {
-		.terminal-intro {
-			display: none;
-		}
-
 		.terminal-actions {
 			animation: none;
 		}

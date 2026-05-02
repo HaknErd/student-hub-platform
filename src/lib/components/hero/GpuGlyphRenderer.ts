@@ -120,21 +120,27 @@ export class GpuGlyphRenderer {
 	private readonly glyphUniforms: {
 		atlas: WebGLUniformLocation | null;
 		resolution: WebGLUniformLocation | null;
+		globalAlpha: WebGLUniformLocation | null;
+		alphaMultiplier: WebGLUniformLocation | null;
 	};
 	private readonly backgroundUniforms: {
 		resolution: WebGLUniformLocation | null;
 		dpr: WebGLUniformLocation | null;
 		accent: WebGLUniformLocation | null;
 		cell: WebGLUniformLocation | null;
+		backgroundStrength: WebGLUniformLocation | null;
+		strength: WebGLUniformLocation | null;
 	};
 	private glyphCount = 0;
 	private staticGlyphCount = 0;
-	private capturingStaticGlyphs = false;
+	private staticGlyphOpacity = 1;
+private capturingStaticGlyphs = false;
 	private readonly staticGlyphData: Float32Array;
 	private width = 1;
 	private height = 1;
 	private dpr = 1;
 	private accent: ParsedColor = { r: 1, g: 112 / 255, b: 67 / 255 };
+	private backgroundStrength = 1;
 	private rendererInfo = {
 		vendor: 'webgl2',
 		renderer: 'webgl2'
@@ -187,13 +193,17 @@ export class GpuGlyphRenderer {
 		this.backgroundBundle = { program: backgroundProgram };
 		this.glyphUniforms = {
 			atlas: gl.getUniformLocation(glyphProgram, 'uAtlas'),
-			resolution: gl.getUniformLocation(glyphProgram, 'uResolution')
+			resolution: gl.getUniformLocation(glyphProgram, 'uResolution'),
+			globalAlpha: gl.getUniformLocation(glyphProgram, 'uGlobalAlpha'),
+			alphaMultiplier: gl.getUniformLocation(glyphProgram, 'uAlphaMultiplier')
 		};
 		this.backgroundUniforms = {
 			resolution: gl.getUniformLocation(backgroundProgram, 'uResolution'),
 			dpr: gl.getUniformLocation(backgroundProgram, 'uDpr'),
 			accent: gl.getUniformLocation(backgroundProgram, 'uAccent'),
-			cell: gl.getUniformLocation(backgroundProgram, 'uCell')
+			cell: gl.getUniformLocation(backgroundProgram, 'uCell'),
+			backgroundStrength: gl.getUniformLocation(backgroundProgram, 'uBackgroundStrength'),
+			strength: gl.getUniformLocation(backgroundProgram, 'uStrength')
 		};
 
 		this.configureGlyphPipeline();
@@ -206,6 +216,10 @@ export class GpuGlyphRenderer {
 		this.height = Math.max(1, height);
 		this.dpr = Math.max(1, dpr);
 		this.accent = this.colorFor(accentColor);
+	}
+
+	setBackgroundStrength(value: number) {
+		this.backgroundStrength = Math.min(1, Math.max(0, value));
 	}
 
 	beginFrame() {
@@ -273,18 +287,21 @@ export class GpuGlyphRenderer {
 		this.staticGlyphCount = 0;
 		this.capturingStaticGlyphs = false;
 	}
+	setStaticGlyphOpacity(value: number) {
+		this.staticGlyphOpacity = Math.min(1, Math.max(0, value));
+	}
 
 	flushStaticGlyphs() {
-		this.drawGlyphBuffer(this.staticGlyphInstanceBuffer, this.staticGlyphCount, false);
+		this.drawGlyphBuffer(this.staticGlyphInstanceBuffer, this.staticGlyphCount, false, this.staticGlyphOpacity);
 	}
 
 	flushGlyphs() {
 		if (this.glyphCount > 0) {
-			this.drawGlyphBuffer(this.glyphInstanceBuffer, this.glyphCount, true);
+			this.drawGlyphBuffer(this.glyphInstanceBuffer, this.glyphCount, true, 1);
 		}
 	}
 
-	private drawGlyphBuffer(buffer: WebGLBuffer, count: number, upload: boolean) {
+	private drawGlyphBuffer(buffer: WebGLBuffer, count: number, upload: boolean, opacityMultiplier = 1) {
 		if (count === 0) return;
 
 		const gl = this.gl;
@@ -293,6 +310,8 @@ export class GpuGlyphRenderer {
 		gl.bindTexture(gl.TEXTURE_2D, this.atlasTexture);
 		gl.uniform1i(this.glyphUniforms.atlas, 0);
 		gl.uniform2f(this.glyphUniforms.resolution, this.width, this.height);
+		gl.uniform1f(this.glyphUniforms.globalAlpha, Math.min(1, Math.max(0, opacityMultiplier)));
+		gl.uniform1f(this.glyphUniforms.alphaMultiplier, opacityMultiplier);
 		gl.bindVertexArray(this.glyphVao);
 		this.bindInstanceBuffer(buffer);
 
@@ -441,6 +460,8 @@ export class GpuGlyphRenderer {
 		gl.uniform1f(this.backgroundUniforms.dpr, this.dpr);
 		gl.uniform3f(this.backgroundUniforms.accent, this.accent.r, this.accent.g, this.accent.b);
 		gl.uniform2f(this.backgroundUniforms.cell, CELL_X, CELL_Y);
+		gl.uniform1f(this.backgroundUniforms.backgroundStrength, this.backgroundStrength);
+		gl.uniform1f(this.backgroundUniforms.strength, this.backgroundStrength);
 		gl.drawArrays(gl.TRIANGLES, 0, 3);
 	}
 
@@ -490,6 +511,8 @@ uniform vec2 uResolution;
 uniform float uDpr;
 uniform vec3 uAccent;
 uniform vec2 uCell;
+uniform float uBackgroundStrength;
+uniform float uStrength;
 out vec4 outColor;
 
 void main() {
@@ -498,16 +521,17 @@ void main() {
 	vec3 paper = vec3(242.0, 241.0, 236.0) / 255.0;
 	float radialDistance = distance(p, vec2(uResolution.x * 0.54, uResolution.y * 0.48));
 	float radial = smoothstep(uResolution.x * 0.62, 0.0, radialDistance);
-	vec3 color = mix(base, uAccent, radial * 0.11);
+	float backgroundStrength = clamp(uBackgroundStrength, 0.0, 1.0);
+	vec3 color = mix(base, uAccent, radial * 0.11 * backgroundStrength);
 
 	float gridX = mod(p.x + 0.5, uCell.x);
 	float gridY = mod(p.y + 0.5, uCell.y);
 	float lineX = min(gridX, uCell.x - gridX);
 	float lineY = min(gridY, uCell.y - gridY);
 	float grid = 1.0 - smoothstep(0.35, 0.85, min(lineX, lineY));
-	float gridAlpha = uResolution.x < 640.0 ? 0.008 : 0.017;
+	float gridAlpha = (uResolution.x < 640.0 ? 0.008 : 0.017) * backgroundStrength;
 
-	color = mix(color, paper, grid * gridAlpha);
+	color = mix(color, paper, grid * gridAlpha * backgroundStrength);
 	outColor = vec4(color, 1.0);
 }
 `;
@@ -543,11 +567,13 @@ in vec2 vUv;
 in vec4 vColor;
 
 uniform sampler2D uAtlas;
+uniform float uGlobalAlpha;
+uniform float uAlphaMultiplier;
 
 out vec4 outColor;
 
 void main() {
-	float alpha = texture(uAtlas, vUv).a * vColor.a;
+	float alpha = texture(uAtlas, vUv).a * vColor.a * uAlphaMultiplier;
 	if (alpha <= 0.002) discard;
 	outColor = vec4(vColor.rgb, alpha);
 }

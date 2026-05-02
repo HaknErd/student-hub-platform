@@ -24,14 +24,15 @@
 		CLICK_RIPPLE_WIDTH,
 		CLICK_TRANSITION_WINDOW,
 		CLICK_UNBLOCK_DURATION,
-		COLOR_LIFE_DISTANCE_DECAY,
 		COLOR_LIFE_DURATION,
 		COLOR_LIFE_MAX_ORIGINS,
 		COLOR_LIFE_MAX_STRENGTH,
+		COLOR_LIFE_STEP_MS,
+		COLOR_LIFE_MIN_ENERGY,
+		COLOR_LIFE_HANDOFF,
+		COLOR_LIFE_BRANCH_CHANCE,
 		COLOR_LIFE_MIN_ORIGINS,
 		COLOR_LIFE_MIN_STRENGTH,
-		COLOR_LIFE_WAVE_SPEED,
-		COLOR_LIFE_WAVE_WIDTH,
 		CURSOR_REBOUND_MOVE_THRESHOLD,
 		CURSOR_RADIUS_X,
 		CURSOR_RADIUS_Y,
@@ -48,12 +49,6 @@
 		HOVER_MIN_DENSITY,
 		HOVER_MIN_FONT,
 		LETTER_SWAP_DURATION,
-		LETTER_SWAP_HOLD_END,
-		LETTER_SWAP_IN_END,
-		LETTER_SWAP_MAX_TARGETS,
-		LETTER_SWAP_MIN_TARGETS,
-		LETTER_SWAP_OUT_END,
-		LETTER_SWAP_TRANSITION_BLOCK_CHANCE,
 		MOBILE_BREAKPOINT,
 		MOBILE_NAME_FONT_SCALE,
 		MOBILE_NAME_Y,
@@ -78,7 +73,6 @@
 		TEXT_SAMPLE_SIGNATURE_STEP_Y,
 		TICKER_BURST_DURATION,
 		TICKER_BURST_PERIOD,
-		VISUAL_EVENT_KINDS,
 		VISUAL_EVENT_MAX_GAP,
 		VISUAL_EVENT_MIN_GAP
 	} from './hero/constants';
@@ -104,10 +98,8 @@
 		isAlphabeticGlyph,
 		pointerDensityLevelFromStrength,
 		pointerDensityStrengthAt,
-		pseudoRandomBool,
 		pseudoRandomGlyph,
 		randomBetween,
-		randomLetterAt,
 		scienceGlyphAt,
 		stableParticleGlyph
 	} from './hero/utils';
@@ -211,7 +203,18 @@
 	let blockAmount = 0;
 	let clickRipples: ClickRipple[] = [];
 	let activeVisualEvent: VisualEvent | null = null;
+let activeLetterSwapEvent: Extract<VisualEvent, { kind: 'letter-swap' }> | null = null;
+let activeColorLifeEvent: Extract<VisualEvent, { kind: 'color-life' }> | null = null;
+let colorLifeStateSeed = -1;
+let colorLifeLastStep = -1;
+let colorLifeFrontier: number[] = [];
+let colorLifeActiveIndexes: number[] = [];
+let colorLifeEnergy = new Float32Array(0);
+let colorLifeActiveFlags = new Uint8Array(0);
+let colorLifeVisitedFlags = new Uint8Array(0);
+let colorLifeNextFlags = new Uint8Array(0);
 	let visualEventTimer: number | null = null;
+let introRandomEventsPrimed = false;
 	let accentColor = '#ff7043';
 	let colorSteps = ['#f2f1ec', '#f2f1ec', '#ff7043', '#ff7043', '#ff7043', '#ff7043'];
 	let frameBudget = FRAME_MS;
@@ -265,10 +268,42 @@
 	let profileRafCallbacks = 0;
 	let profileSkippedRafCallbacks = 0;
 	let profileLabel = '';
+let mainTypeCharCount = 0;
+let signatureTypeCharCount = 0;
+let introReady = false;
+let introStartAt = 0;
+let typeMainSchedule = new Float32Array(0);
+let typeSignatureSchedule = new Float32Array(0);
+let lastRevealSyncAt = 0;
 
-	const PERF_PANEL_WIDTH = 236;
+	
+const INTRO_HELIX_AFTER_TYPE_MS = 160;
+const INTRO_HELIX_REVEAL_MS = 900;
+const INTRO_BACKGROUND_AFTER_HELIX_MS = 420;
+const TYPE_START_DELAY_MS = 220;
+const INTRO_UNBLUR_DELAY_MS = 180;
+const INTRO_UNBLUR_DURATION_MS = 1150;
+const INTRO_PAGE_REVEAL_DELAY_MS = 220;
+const INTRO_PAGE_REVEAL_DURATION_MS = 1350;
+const TYPE_MAIN_CHAR_MS = 56;
+const TYPE_SIGNATURE_DELAY_MS = 500;
+const TYPE_SIGNATURE_CHAR_MS = 40;
+
+const INTRO_HELIX_DELAY_MS = 0;
+const INTRO_HELIX_FADE_MS = 900;
+
+const INTRO_BACKGROUND_DELAY_MS = 120;
+const INTRO_BACKGROUND_FADE_MS = 1100;
+
+const PERF_PANEL_WIDTH = 236;
 	const PERF_PANEL_HEIGHT = 126;
 	const PERF_PANEL_UPDATE_MS = 250;
+ 
+	function easeIntro(value: number) {
+		const t = clamp(value, 0, 1);
+		return t * t * (3 - 2 * t);
+	}
+
 
 
 	function snapX(value: number) {
@@ -282,6 +317,316 @@
 	function hasRenderer() {
 		return Boolean(ctx || gpuRenderer);
 	}
+
+	function syncIntroClockForCanvas() {
+		if (reduceMotion) {
+			introReady = true;
+			if (introStartAt <= 0) introStartAt = performance.now();
+			bootTime = introStartAt;
+			return;
+		}
+
+		if (!introReady || introStartAt <= 0) {
+			bootTime = 0;
+			return;
+		}
+
+		bootTime = introStartAt;
+	}
+
+	function visibleGlyphCount(label: string) {
+		return label.replace(/\s+/g, '').length;
+	}
+
+	function offsetSampleIndexes(points: SamplePoint[], offset: number) {
+		return points.map((point) => ({
+			...point,
+			charIndex: point.charIndex >= 0 ? point.charIndex + offset : point.charIndex
+		}));
+	}
+
+	function buildTypeSchedule(count: number, baseMs: number) {
+		const schedule = new Float32Array(count + 1);
+		let elapsed = 0;
+
+		schedule[0] = 0;
+
+		for (let index = 0; index < count; index++) {
+			const progress = count <= 1 ? 1 : index / (count - 1);
+
+			// Breathing cadence:
+			// slow start -> slightly faster middle -> slightly slower end.
+			const breath = 1.14 - Math.sin(progress * Math.PI) * 0.2 + progress * 0.04;
+			const jitter = 0.97 + hashNumber(count * 23.17 + index * 19.31) * 0.06;
+
+			elapsed += baseMs * breath * jitter;
+			schedule[index + 1] = elapsed;
+		}
+
+		return schedule;
+	}
+
+	function visibleCountFromSchedule(schedule: Float32Array, elapsed: number) {
+		if (schedule.length <= 1 || elapsed <= 0) return 0;
+
+		let low = 0;
+		let high = schedule.length - 1;
+
+		while (low < high) {
+			const middle = Math.ceil((low + high) / 2);
+
+			if (schedule[middle] <= elapsed) {
+				low = middle;
+			} else {
+				high = middle - 1;
+			}
+		}
+
+		return clamp(low, 0, schedule.length - 1);
+	}
+
+	
+
+	function smoothIntroCurve(value: number) {
+		const t = clamp(value, 0, 1);
+		return t * t * (3 - 2 * t);
+	}
+
+
+
+	function introSceneAmount(now: number) {
+		return reduceMotion ? 1 : introTimeline(now).backgroundProgress;
+	}
+
+
+
+
+	
+	function introDurations() {
+		const mainDuration = typeMainSchedule[typeMainSchedule.length - 1] ?? mainTypeCharCount * TYPE_MAIN_CHAR_MS;
+		const signatureDuration =
+			signatureTypeCharCount > 0
+				? TYPE_SIGNATURE_DELAY_MS + (typeSignatureSchedule[typeSignatureSchedule.length - 1] ?? signatureTypeCharCount * TYPE_SIGNATURE_CHAR_MS)
+				: 0;
+
+		const typeDoneAt = Math.max(mainDuration, signatureDuration);
+		const helixStart = typeDoneAt + INTRO_HELIX_DELAY_MS;
+		const pageRevealStart = helixStart + INTRO_PAGE_REVEAL_DELAY_MS;
+		const pageRevealEnd = pageRevealStart + INTRO_PAGE_REVEAL_DURATION_MS;
+
+		return {
+			mainDuration,
+			signatureDuration,
+			typeDoneAt,
+			unblurStart: pageRevealStart,
+			unblurEnd: pageRevealEnd,
+			helixStart,
+			pageRevealStart,
+			pageRevealEnd
+		};
+	}
+
+
+	
+
+
+
+	
+	function introTimeline(now: number) {
+		if (reduceMotion) {
+			return {
+				elapsed: Number.POSITIVE_INFINITY,
+				mainVisible: Number.POSITIVE_INFINITY,
+				signatureVisible: Number.POSITIVE_INFINITY,
+				typeDone: true,
+				unblurProgress: 1,
+				helixElapsed: Number.POSITIVE_INFINITY,
+				helixProgress: 1,
+				backgroundProgress: 1,
+				pageProgress: 1,
+				done: true
+			};
+		}
+
+		if (!introReady || bootTime <= 0) {
+			return {
+				elapsed: 0,
+				mainVisible: 0,
+				signatureVisible: 0,
+				typeDone: false,
+				unblurProgress: 0,
+				helixElapsed: Number.NEGATIVE_INFINITY,
+				helixProgress: 0,
+				backgroundProgress: 0,
+				pageProgress: 0,
+				done: false
+			};
+		}
+
+		const elapsed = Math.max(0, now - bootTime);
+		const durations = introDurations();
+		const mainVisible = visibleCountFromSchedule(typeMainSchedule, elapsed);
+		const signatureVisible =
+			elapsed < TYPE_SIGNATURE_DELAY_MS
+				? 0
+				: visibleCountFromSchedule(typeSignatureSchedule, elapsed - TYPE_SIGNATURE_DELAY_MS);
+
+		const helixElapsed = elapsed - durations.helixStart;
+		const helixProgress = easeIntro(helixElapsed / INTRO_HELIX_FADE_MS);
+		const pageProgress = easeIntro((elapsed - durations.pageRevealStart) / INTRO_PAGE_REVEAL_DURATION_MS);
+
+		return {
+			elapsed,
+			mainVisible,
+			signatureVisible,
+			typeDone: elapsed >= durations.typeDoneAt,
+			unblurProgress: pageProgress,
+			helixElapsed,
+			helixProgress,
+			backgroundProgress: pageProgress,
+			pageProgress,
+			done: pageProgress >= 1
+		};
+	}
+
+
+	function introUniformRevealAmount(now: number) {
+		const intro = introTimeline(now);
+
+		if (reduceMotion || intro.done) return 1;
+
+		const progress = easeOutCubic(clamp(intro.unblurProgress, 0, 1));
+		return clamp(progress, 0, 1);
+	}
+
+	function introClampedBrightness(now: number) {
+		const amount = introUniformRevealAmount(now);
+		return clamp(0.28 + amount * 0.72, 0.28, 1);
+	}
+
+	function introSequenceDone(now: number) {
+		return introTimeline(now).done;
+	}
+
+	function particleTypeProgress(now: number, particle: Particle) {
+		if (reduceMotion) return 1;
+		if (!introReady || introStartAt <= 0 || now < introStartAt) return 0;
+		if (particle.charIndex < 0) return 1;
+
+		const schedule = particle.role === 'signature' ? typeSignatureSchedule : typeMainSchedule;
+		if (schedule.length <= 1) return 1;
+
+		const elapsed = now - introStartAt;
+		const offset = particle.role === 'signature' ? TYPE_SIGNATURE_DELAY_MS : 0;
+		const index = clamp(particle.charIndex, 0, schedule.length - 2);
+		const charStart = offset + (schedule[index] ?? 0);
+		const charEnd = offset + (schedule[index + 1] ?? charStart + TYPE_MAIN_CHAR_MS);
+		const particleJitter = hashNumber(particle.homeX * 0.193 + particle.homeY * 0.277 + particle.charIndex * 11.31) * 86;
+		const fadeMs = Math.max(92, (charEnd - charStart) * 0.82);
+
+		return clamp((elapsed - charStart - particleJitter) / fadeMs, 0, 1);
+	}
+
+	function introUsesLiteralGlyph(now: number, particle: Particle) {
+		if (reduceMotion || particle.role !== 'main') return false;
+
+		const intro = introTimeline(now);
+		if (!introReady || bootTime <= 0) return false;
+
+		const durations = introDurations();
+		const literalHoldEnd = durations.typeDoneAt + 520;
+
+		// During the typewriter phase, draw the actual text glyphs.
+		// After that, hand back to the random particle texture.
+		return intro.elapsed <= literalHoldEnd;
+	}
+
+	
+
+
+
+	function revealProgressForRect(now: number, _rect: DOMRect) {
+		return reduceMotion ? 1 : introTimeline(now).backgroundProgress;
+	}
+
+
+	
+
+
+
+	
+	function syncExternalRevealTargets(now: number) {
+		if (typeof document === 'undefined') return;
+
+		const intro = introTimeline(now);
+		const amount = reduceMotion ? 1 : clamp(intro.pageProgress, 0, 1);
+		const blur = (1 - amount) * 8;
+		const rootElement = document.documentElement;
+
+		rootElement.classList.add('hero-intro-active');
+		rootElement.style.setProperty('--hero-page-reveal', amount.toFixed(4));
+		rootElement.style.setProperty('--hero-page-blur', `${blur.toFixed(2)}px`);
+
+		rootElement.classList.toggle('hero-intro-ready', introReady);
+		rootElement.classList.toggle('hero-intro-typing', introReady && !intro.typeDone);
+		rootElement.classList.toggle('hero-intro-revealing', introReady && intro.typeDone && !intro.done);
+		rootElement.classList.toggle('hero-intro-done', intro.done);
+
+		if (intro.done && visualEventTimer === null && !reduceMotion && visible && document.visibilityState !== 'hidden') {
+			scheduleNextVisualEvent();
+		}
+	}
+
+
+
+
+
+
+
+	
+	function cleanupExternalRevealTargets() {
+		if (typeof document === 'undefined') return;
+
+		const rootElement = document.documentElement;
+		rootElement.classList.remove('hero-intro-active', 'hero-intro-ready', 'hero-intro-typing', 'hero-intro-revealing', 'hero-intro-done');
+		rootElement.style.removeProperty('--hero-page-reveal');
+		rootElement.style.removeProperty('--hero-page-blur');
+		rootElement.style.removeProperty('--hero-page-y');
+
+		const targets = document.querySelectorAll<HTMLElement>('.site-header, .site-footer, .terminal-actions, .terminal-intro, .hero-reveal-target, [data-hero-reveal]');
+		for (const target of targets) {
+			target.style.opacity = '';
+			target.style.filter = '';
+			target.style.transform = '';
+			target.style.pointerEvents = '';
+			target.style.animation = '';
+			target.style.transition = '';
+		}
+	}
+
+	function particleTypedIn(now: number, particle: Particle) {
+		return particleTypeProgress(now, particle) > 0.01;
+	}
+
+	
+
+	function introOpacityForY(_now: number, _y: number) {
+		return 1;
+	}
+
+	
+function introTextOpacity(_now: number) {
+	return 1;
+}
+
+
+
+
+	function drawTypewriterCursors(_now: number) {
+		return;
+	}
+
+
 
 	function gridSafeDprFor(nativeDpr: number, hardCap: number, cssWidth: number, cssHeight: number) {
 		const cssMegapixels = (cssWidth * cssHeight) / 1_000_000;
@@ -663,9 +1008,9 @@
 
 		// Qwen: bake resting particles so idle frames do not loop through every glyph.
 		for (const particle of particles) {
-			const roleBoost = particle.role === 'signature' ? 1.85 : 1.28;
+			const roleBoost = particle.role === 'signature' ? 2.1 : 1;
 			const alpha = Math.min(1, particle.alpha * roleBoost);
-			drawGlyph(layerCtx, particle.baseGlyph, particle.homeX, particle.homeY, colorSteps[particle.baseFillIndex] ?? colorSteps[0], 7, alpha);
+			drawGlyph(layerCtx, particle.role === 'signature' ? particle.literalGlyph : particle.baseGlyph, particle.homeX, particle.homeY, colorSteps[particle.baseFillIndex] ?? colorSteps[0], particle.baseFontSize, alpha);
 		}
 
 		layerCtx.globalAlpha = 1;
@@ -703,8 +1048,7 @@
 		gpuRenderer.beginStaticGlyphCapture();
 
 		const baseAlpha = width < MOBILE_BREAKPOINT ? 0.18 : 0.38;
-
-		for (let rowIndex = 0; rowIndex < tickerRows.length; rowIndex++) {
+for (let rowIndex = 0; rowIndex < tickerRows.length; rowIndex++) {
 			drawTickerRowGlyphs(ctx, tickerRows[rowIndex], rowIndex, 0, 1, baseAlpha);
 		}
 
@@ -863,53 +1207,190 @@
 		}
 	}
 
-	function applyColorLifeInfluence(now: number) {
-		if (!activeVisualEvent || activeVisualEvent.kind !== 'color-life') return;
+	function ensureColorLifeCellularArrays() {
+		const count = particles.length;
 
-		const elapsed = now - activeVisualEvent.startedAt;
-		if (elapsed < 0 || elapsed >= activeVisualEvent.duration) return;
+		if (colorLifeEnergy.length === count) return;
 
-		const age = elapsed / activeVisualEvent.duration;
-		const globalFade = Math.pow(1 - age, 1.45);
+		colorLifeEnergy = new Float32Array(count);
+		colorLifeActiveFlags = new Uint8Array(count);
+		colorLifeVisitedFlags = new Uint8Array(count);
+		colorLifeNextFlags = new Uint8Array(count);
+		colorLifeFrontier = [];
+		colorLifeActiveIndexes.length = 0;
+		colorLifeStateSeed = -1;
+		colorLifeLastStep = -1;
+	}
 
-		// Claude Sonnet + ChatGPT: push color-life waves from origins instead of checking every particle/origin pair.
-		for (const origin of activeVisualEvent.origins) {
-			const waveDistance = elapsed * COLOR_LIFE_WAVE_SPEED;
-			const maxDistance = waveDistance + COLOR_LIFE_WAVE_WIDTH * 3.2;
-			const maxDistanceSquared = maxDistance * maxDistance;
-			const queryRadius = maxDistance * Math.max(CELL_X, CELL_Y);
+	function resetColorLifeCellularState() {
+		colorLifeStateSeed = -1;
+		colorLifeLastStep = -1;
+		colorLifeFrontier = [];
+		colorLifeActiveIndexes.length = 0;
 
-			queryParticleGrid(origin.x - queryRadius, origin.y - queryRadius, origin.x + queryRadius, origin.y + queryRadius, (index) => {
-				const particle = particles[index];
-				if (particle.role !== 'main') return;
+		if (colorLifeEnergy.length > 0) colorLifeEnergy.fill(0);
+		if (colorLifeActiveFlags.length > 0) colorLifeActiveFlags.fill(0);
+		if (colorLifeVisitedFlags.length > 0) colorLifeVisitedFlags.fill(0);
+		if (colorLifeNextFlags.length > 0) colorLifeNextFlags.fill(0);
+	}
 
-				const dx = (particle.homeX - origin.x) / CELL_X;
-				const dy = (particle.homeY - origin.y) / CELL_Y;
+	function activateColorLifeCell(index: number, energy: number, frontier: number[] | null) {
+		if (index < 0 || index >= particles.length) return;
+		if (energy < COLOR_LIFE_MIN_ENERGY) return;
+
+		const particle = particles[index];
+		if (!particle || particle.role !== 'main') return;
+
+		if (!colorLifeActiveFlags[index]) {
+			colorLifeActiveFlags[index] = 1;
+			colorLifeActiveIndexes.push(index);
+		}
+
+		if (energy > colorLifeEnergy[index]) {
+			colorLifeEnergy[index] = clamp(energy, 0, 1);
+		}
+
+		if (frontier && !colorLifeVisitedFlags[index]) {
+			colorLifeVisitedFlags[index] = 1;
+			frontier.push(index);
+		}
+	}
+
+	function nearestMainParticleIndex(x: number, y: number) {
+		let bestIndex = -1;
+		let bestDistance = Number.POSITIVE_INFINITY;
+		const searchRadius = SPATIAL_GRID_CELL * 1.5;
+
+		queryParticleGrid(x - searchRadius, y - searchRadius, x + searchRadius, y + searchRadius, (index) => {
+			const particle = particles[index];
+			if (!particle || particle.role !== 'main') return;
+
+			const dx = particle.homeX - x;
+			const dy = particle.homeY - y;
+			const distance = dx * dx + dy * dy;
+
+			if (distance < bestDistance) {
+				bestDistance = distance;
+				bestIndex = index;
+			}
+		});
+
+		return bestIndex;
+	}
+
+	function seedColorLifeCellularEvent(event: Extract<VisualEvent, { kind: 'color-life' }>) {
+		ensureColorLifeCellularArrays();
+		resetColorLifeCellularState();
+
+		colorLifeStateSeed = event.seed;
+		colorLifeLastStep = 0;
+
+		const seeded: number[] = [];
+
+		for (const origin of event.origins) {
+			const index = nearestMainParticleIndex(origin.x, origin.y);
+			if (index >= 0) {
+				activateColorLifeCell(index, origin.strength, seeded);
+			}
+		}
+
+		colorLifeFrontier = seeded;
+	}
+
+	function advanceColorLifeCellularStep(seed: number) {
+		if (colorLifeFrontier.length === 0) return;
+
+		const nextFrontier: number[] = [];
+		colorLifeNextFlags.fill(0);
+
+		for (const sourceIndex of colorLifeFrontier) {
+			const source = particles[sourceIndex];
+			if (!source || source.role !== 'main') continue;
+
+			const sourceEnergy = colorLifeEnergy[sourceIndex];
+			if (sourceEnergy < COLOR_LIFE_MIN_ENERGY) continue;
+
+			const radiusX = CELL_X * 4.15;
+			const radiusY = CELL_Y * 4.15;
+
+			queryParticleGrid(source.homeX - radiusX, source.homeY - radiusY, source.homeX + radiusX, source.homeY + radiusY, (index) => {
+				if (index === sourceIndex) return;
+
+				const target = particles[index];
+				if (!target || target.role !== 'main') return;
+
+				const dx = (target.homeX - source.homeX) / CELL_X;
+				const dy = (target.homeY - source.homeY) / CELL_Y;
 				const distanceSquared = dx * dx + dy * dy;
-				if (distanceSquared > maxDistanceSquared) return;
 
-				const distance = Math.sqrt(distanceSquared);
-				const wave = waveDistance - distance;
-				const waveAmount = Math.exp(-(wave * wave) / (2 * COLOR_LIFE_WAVE_WIDTH * COLOR_LIFE_WAVE_WIDTH));
-				const passedLife = Math.pow(COLOR_LIFE_DISTANCE_DECAY, distance);
-				const local = waveAmount * passedLife * globalFade * origin.strength;
+				if (distanceSquared <= 0 || distanceSquared > 17.25) return;
 
-				if (local <= colorLifeInfluence[index]) return;
-				colorLifeInfluence[index] = clamp(local, 0, 1);
-				markDynamicParticle(index);
+				const isJump = distanceSquared > 5.25;
+				const branchRoll = hashNumber(seed + sourceIndex * 0.173 + index * 0.389 + colorLifeLastStep * 13.37);
+				const branchLimit = isJump ? COLOR_LIFE_BRANCH_CHANCE * 0.56 : COLOR_LIFE_BRANCH_CHANCE;
+				if (branchRoll > branchLimit) return;
+
+				const distancePenalty = isJump ? 0.76 : distanceSquared > 2.2 ? 0.91 : 1;
+				const jitter = 0.97 + hashNumber(seed + index * 0.071 + colorLifeLastStep * 5.91) * 0.09;
+				const nextEnergy = sourceEnergy * COLOR_LIFE_HANDOFF * distancePenalty * jitter;
+
+				if (nextEnergy < COLOR_LIFE_MIN_ENERGY) return;
+
+				activateColorLifeCell(index, nextEnergy, null);
+
+				if (!colorLifeVisitedFlags[index] && !colorLifeNextFlags[index]) {
+					colorLifeVisitedFlags[index] = 1;
+					colorLifeNextFlags[index] = 1;
+					nextFrontier.push(index);
+				}
 			});
+		}
+
+		colorLifeFrontier = nextFrontier;
+	}
+
+	function applyColorLifeInfluence(now: number) {
+		if (!activeColorLifeEvent) return;
+
+		const elapsed = now - activeColorLifeEvent.startedAt;
+		if (elapsed < 0 || elapsed >= activeColorLifeEvent.duration) return;
+
+		if (colorLifeStateSeed !== activeColorLifeEvent.seed) {
+			seedColorLifeCellularEvent(activeColorLifeEvent);
+		}
+
+		const targetStep = Math.floor(elapsed / COLOR_LIFE_STEP_MS);
+		const maxStepsThisFrame = 4;
+		const cappedStep = Math.min(targetStep, colorLifeLastStep + maxStepsThisFrame);
+
+		while (colorLifeLastStep < cappedStep) {
+			advanceColorLifeCellularStep(activeColorLifeEvent.seed);
+			colorLifeLastStep += 1;
+		}
+
+		const age = elapsed / activeColorLifeEvent.duration;
+		const endFade = age < 0.93 ? 1 : 1 - clamp((age - 0.93) / 0.07, 0, 1);
+
+		for (let i = 0; i < colorLifeActiveIndexes.length; i++) {
+			const index = colorLifeActiveIndexes[i];
+			const energy = colorLifeEnergy[index] * endFade;
+
+			if (energy <= COLOR_LIFE_MIN_ENERGY * 0.55) continue;
+
+			colorLifeInfluence[index] = Math.max(colorLifeInfluence[index], clamp(energy, 0, 1));
+			markDynamicParticle(index);
 		}
 	}
 
 	function markLetterSwapParticles(now: number) {
-		if (!activeVisualEvent || activeVisualEvent.kind !== 'letter-swap') return;
+		if (!activeLetterSwapEvent) return;
 
-		const elapsed = now - activeVisualEvent.startedAt;
-		if (elapsed < 0 || elapsed >= activeVisualEvent.duration) return;
+		const elapsed = now - activeLetterSwapEvent.startedAt;
+		if (elapsed < 0 || elapsed >= activeLetterSwapEvent.duration) return;
 
 		for (let index = 0; index < particles.length; index++) {
 			const particle = particles[index];
-			if (particle.role === 'main' && activeVisualEvent.targets.has(particle.charIndex)) {
+			if (particle.role === 'main' && activeLetterSwapEvent.targets.has(particle.charIndex)) {
 				markDynamicParticle(index);
 			}
 		}
@@ -1047,16 +1528,24 @@
 
 		const image = sampleCtx.getImageData(0, 0, sample.width, sample.height).data;
 		const points: SamplePoint[] = [];
+		const usedGridCells = new Set<string>();
 		const startX = Math.floor(stepX / 2);
 		const startY = Math.floor(stepY / 2);
 
 		for (let py = startY; py < sample.height; py += stepY) {
 			for (let px = startX; px < sample.width; px += stepX) {
-				if (image[(py * sample.width + px) * 4 + 3] > 72) {
+				if (image[(py * sample.width + px) * 4 + 3] > 56) {
+					const x = snapX(px);
+					const y = snapY(py);
+					const cellKey = `${Math.round(x / CELL_X)}:${Math.round(y / CELL_Y)}`;
+
+					if (usedGridCells.has(cellKey)) continue;
+					usedGridCells.add(cellKey);
+
 					const meta = glyphMetaFor(px, py);
 					points.push({
-						x: px,
-						y: py,
+						x,
+						y,
 						glyph: meta.glyph,
 						charIndex: meta.charIndex
 					});
@@ -1203,28 +1692,51 @@
 			)
 		);
 
-		const signatureLabel = cleanSignature
-			? isTablet
-				? cleanSignature.toUpperCase()
-				: `WELCOME BACK ${cleanSignature.toUpperCase()}`
-			: '';
+		const signatureTopLabel = cleanSignature ? 'WELCOME BACK' : '';
+		const signatureBottomLabel = cleanSignature ? cleanSignature.toUpperCase() : '';
+		const signatureX = isTablet ? width / 2 : width - clamp(width * 0.075, 82, 140);
+		const signatureAlign = isTablet ? 'center' : 'right';
+		const signatureTopY = isTablet ? height * 0.655 : height * 0.64;
+		const signatureBottomY = isTablet ? height * 0.735 : height * 0.72;
 
-		const signaturePoints = signatureLabel
+		const signatureTopPoints = cleanSignature
 			? sampleText(
-					signatureLabel,
+					signatureTopLabel,
 					fittedMonoFontSize(
-						signatureLabel,
-						width * (isTablet ? 0.72 : 0.45),
-						isTablet ? 36 : 68,
-						isTablet ? 64 : signatureFontSize(signatureLabel)
+						signatureTopLabel,
+						width * (isTablet ? 0.56 : 0.34),
+						isTablet ? 24 : 34,
+						isTablet ? 40 : 52
 					),
-					isTablet ? width / 2 : width - clamp(width * 0.075, 82, 140),
-					isTablet ? height * 0.68 : height * 0.68,
-					isTablet ? 'center' : 'right',
+					signatureX,
+					signatureTopY,
+					signatureAlign,
 					TEXT_SAMPLE_SIGNATURE_STEP_X,
 					TEXT_SAMPLE_SIGNATURE_STEP_Y
 				)
 			: [];
+
+		const signatureBottomPoints = cleanSignature
+			? offsetSampleIndexes(
+					sampleText(
+						signatureBottomLabel,
+						fittedMonoFontSize(
+							signatureBottomLabel,
+							width * (isTablet ? 0.72 : 0.42),
+							isTablet ? 30 : 42,
+							isTablet ? 50 : 66
+						),
+						signatureX,
+						signatureBottomY,
+						signatureAlign,
+						TEXT_SAMPLE_SIGNATURE_STEP_X,
+						TEXT_SAMPLE_SIGNATURE_STEP_Y
+					),
+					visibleGlyphCount(signatureTopLabel) + 1
+				)
+			: [];
+
+		const signaturePoints = cleanSignature ? [...signatureTopPoints, ...signatureBottomPoints] : [];
 
 		return {
 			main: mainPoints,
@@ -1238,15 +1750,15 @@
 		// DeepSeek + Qwen + ChatGPT: use explicit device/quality particle budgets instead of one fixed density.
 		const maxMainBase =
 			width < MOBILE_BREAKPOINT
-				? clamp(Math.floor((width * height) / 300), 2600, 6200)
-				: clamp(Math.floor((width * height) / 260), 4200, 12000);
+				? clamp(Math.floor((width * height) / 360), 2200, 5200)
+				: clamp(Math.floor((width * height) / 340), 3200, 9000);
 		const maxMain = Math.floor(maxMainBase * qualityScale);
 		const mainStep = Math.max(1, Math.ceil(points.main.length / maxMain));
 		const main = points.main.filter((_, index) => index % mainStep === 0);
 		const maxSignatureBase =
 			width < MOBILE_BREAKPOINT
-				? clamp(Math.floor((width * height) / 360), 1800, 3600)
-				: clamp(Math.floor((width * height) / 320), 2600, 7000);
+				? clamp(Math.floor((width * height) / 180), 3200, 7200)
+				: clamp(Math.floor((width * height) / 190), 5600, 13000);
 		const maxSignature = Math.floor(maxSignatureBase * qualityScale);
 		const signatureStep = Math.max(1, Math.ceil(points.signature.length / maxSignature));
 		const signature = points.signature.filter((_, index) => index % signatureStep === 0);
@@ -1265,10 +1777,10 @@
 			return {
 				homeX,
 				homeY,
-				startX: homeX + (lane - 12) * CELL_X,
-				startY: height + CELL_Y * (12 + (index % 16)),
+				startX: homeX,
+				startY: homeY,
 				phase: (index % 97) * 0.19,
-				delay: (index % 58) * 9,
+				delay: 0,
 				alpha: role === 'signature' ? 1.02 + (index % 4) * 0.02 : 0.82 + (index % 5) * 0.03,
 				glyph: glyphAt(index * 11),
 				literalGlyph: point.glyph,
@@ -1280,10 +1792,26 @@
 				hideGate: ((index * 29) % 100) / 100,
 				baseGlyph: stableParticleGlyph(index + (role === 'signature' ? 100000 : 0), point.charIndex, homeX, homeY),
 				baseFillIndex: accent ? 3 : 0,
-				baseFontSize: role === 'signature' ? 4.2 : 5.1,
+				baseFontSize: role === 'signature' ? 6.2 : 5.1,
 				role
 			};
 		});
+
+		mainTypeCharCount = 0;
+		signatureTypeCharCount = 0;
+
+		for (const particle of particles) {
+			if (particle.charIndex < 0) continue;
+
+			if (particle.role === 'main') {
+				mainTypeCharCount = Math.max(mainTypeCharCount, particle.charIndex + 1);
+			} else if (particle.role === 'signature') {
+				signatureTypeCharCount = Math.max(signatureTypeCharCount, particle.charIndex + 1);
+			}
+		}
+
+		typeMainSchedule = buildTypeSchedule(mainTypeCharCount, TYPE_MAIN_CHAR_MS);
+		typeSignatureSchedule = buildTypeSchedule(signatureTypeCharCount, TYPE_SIGNATURE_CHAR_MS);
 
 		buildSpatialGrid();
 		ensureInfluenceArrays();
@@ -1308,16 +1836,11 @@
 
 	function pickLetterSwapTargets(seed: number) {
 		const indexes = shuffledIndexes(availableBigLetterIndexes(), seed);
-		const maxCount = Math.min(LETTER_SWAP_MAX_TARGETS, indexes.length);
-		const minCount = Math.min(LETTER_SWAP_MIN_TARGETS, maxCount);
-		const count =
-			maxCount <= minCount
-				? minCount
-				: minCount + Math.floor(hashNumber(seed + 77.1) * (maxCount - minCount + 1));
-
 		const targets = new Map<number, string>();
 
-		for (const charIndex of indexes.slice(0, count)) {
+		// Every main-title character participates in the same roll event.
+		// The timing is simultaneous; only the random glyph texture differs per particle.
+		for (const charIndex of indexes) {
 			targets.set(charIndex, pseudoRandomGlyph(seed, charIndex));
 		}
 
@@ -1359,28 +1882,62 @@
 		}
 	}
 
+
+
+
 	function scheduleNextVisualEvent() {
 		clearVisualEventTimer();
 
-		if (reduceMotion || document.visibilityState === 'hidden' || !visible) return;
+		if (reduceMotion || document.visibilityState === 'hidden' || !visible || !introReady) return;
 
-		const delay = randomBetween(VISUAL_EVENT_MIN_GAP, VISUAL_EVENT_MAX_GAP);
+		if (!introSequenceDone(performance.now())) {
+			visualEventTimer = window.setTimeout(() => {
+				scheduleNextVisualEvent();
+			}, 180);
+			return;
+		}
+
+		const delay = introRandomEventsPrimed
+			? randomBetween(VISUAL_EVENT_MIN_GAP * 0.55, VISUAL_EVENT_MAX_GAP * 0.55)
+			: randomBetween(520, 950);
+
+		introRandomEventsPrimed = true;
 
 		visualEventTimer = window.setTimeout(() => {
 			startVisualEvent();
 		}, delay);
 	}
 
+
+
 	function startVisualEvent() {
-		if (reduceMotion || activeVisualEvent || particles.length === 0) {
+		visualEventTimer = null;
+
+		if (reduceMotion || particles.length === 0 || !introSequenceDone(performance.now())) {
 			scheduleNextVisualEvent();
 			return;
 		}
 
 		const seed = Math.floor(Math.random() * 1000000);
-		const eventKind = VISUAL_EVENT_KINDS[Math.floor(hashNumber(seed) * VISUAL_EVENT_KINDS.length)] ?? 'letter-swap';
+		let eventKind: 'letter-swap' | 'color-life' = hashNumber(seed + 911.7) < 0.5 ? 'letter-swap' : 'color-life';
+
+		if (eventKind === 'letter-swap' && activeLetterSwapEvent && !activeColorLifeEvent) {
+			eventKind = 'color-life';
+		} else if (eventKind === 'color-life' && activeColorLifeEvent && !activeLetterSwapEvent) {
+			eventKind = 'letter-swap';
+		}
+
+		if (activeLetterSwapEvent && activeColorLifeEvent) {
+			scheduleNextVisualEvent();
+			return;
+		}
 
 		if (eventKind === 'letter-swap') {
+			if (activeLetterSwapEvent) {
+				scheduleNextVisualEvent();
+				return;
+			}
+
 			const targets = pickLetterSwapTargets(seed);
 
 			if (targets.size === 0) {
@@ -1388,7 +1945,7 @@
 				return;
 			}
 
-			activeVisualEvent = {
+			activeLetterSwapEvent = {
 				kind: 'letter-swap',
 				startedAt: performance.now(),
 				duration: LETTER_SWAP_DURATION,
@@ -1396,12 +1953,24 @@
 				seed
 			};
 
-			clearVisualEventTimer();
-			visualEventTimer = window.setTimeout(() => {
-				activeVisualEvent = null;
-				scheduleNextVisualEvent();
+			activeVisualEvent = activeLetterSwapEvent;
+
+			window.setTimeout(() => {
+				if (activeLetterSwapEvent?.seed === seed) {
+					activeLetterSwapEvent = null;
+				}
+
+				if (activeVisualEvent?.seed === seed) {
+					activeVisualEvent = activeColorLifeEvent;
+				}
 			}, LETTER_SWAP_DURATION);
 
+			scheduleNextVisualEvent();
+			return;
+		}
+
+		if (activeColorLifeEvent) {
+			scheduleNextVisualEvent();
 			return;
 		}
 
@@ -1412,7 +1981,7 @@
 			return;
 		}
 
-		activeVisualEvent = {
+		activeColorLifeEvent = {
 			kind: 'color-life',
 			startedAt: performance.now(),
 			duration: COLOR_LIFE_DURATION,
@@ -1420,31 +1989,53 @@
 			seed
 		};
 
-		clearVisualEventTimer();
-		visualEventTimer = window.setTimeout(() => {
-			activeVisualEvent = null;
-			scheduleNextVisualEvent();
+		activeVisualEvent = activeColorLifeEvent;
+		resetColorLifeCellularState();
+
+		window.setTimeout(() => {
+			if (activeColorLifeEvent?.seed === seed) {
+				activeColorLifeEvent = null;
+				resetColorLifeCellularState();
+			}
+
+			if (activeVisualEvent?.seed === seed) {
+				activeVisualEvent = activeLetterSwapEvent;
+			}
 		}, COLOR_LIFE_DURATION);
+
+		scheduleNextVisualEvent();
 	}
 
 	function resetVisualEvents() {
 		activeVisualEvent = null;
+		activeLetterSwapEvent = null;
+		activeColorLifeEvent = null;
+		introRandomEventsPrimed = false;
+		resetColorLifeCellularState();
 		clearVisualEventTimer();
 		scheduleNextVisualEvent();
 	}
 
 	function syncRunningState() {
-		const shouldRun = !reduceMotion && visible && document.visibilityState !== 'hidden';
+		const shouldRun = !reduceMotion && introReady && visible && document.visibilityState !== 'hidden';
 
 		if (!shouldRun) {
 			stop();
-			activeVisualEvent = null;
-			clearVisualEventTimer();
+
+			if (!introReady || document.visibilityState === 'hidden' || !visible) {
+				activeVisualEvent = null;
+				activeLetterSwapEvent = null;
+				activeColorLifeEvent = null;
+				resetColorLifeCellularState();
+				clearVisualEventTimer();
+			}
+
 			return;
 		}
 
 		start();
-		if (!activeVisualEvent && visualEventTimer === null) {
+
+		if (visualEventTimer === null && introSequenceDone(performance.now())) {
 			scheduleNextVisualEvent();
 		}
 	}
@@ -1685,12 +2276,23 @@
 			buildStaticBackgroundLayer();
 		}
 
-		bootTime = performance.now();
+		if (reduceMotion) {
+			bootTime = performance.now();
+		} else if (!introReady) {
+			bootTime = 0;
+		} else if (bootTime <= 0) {
+			bootTime = performance.now();
+		}
+
+		syncIntroClockForCanvas();
 		lastFrame = 0;
 		nextFrameDue = 0;
 		rafCallbacksTotal = 0;
 		skippedRafCallbacksTotal = 0;
 		activeVisualEvent = null;
+		activeLetterSwapEvent = null;
+		activeColorLifeEvent = null;
+		resetColorLifeCellularState();
 		buildTickerRows();
 		if (gpuRenderer) {
 			buildGpuStaticTickerLayer();
@@ -1701,7 +2303,9 @@
 		if (!gpuRenderer) {
 			buildStaticParticleLayer();
 		}
-		draw(performance.now());
+		if (reduceMotion || introReady) {
+			draw(performance.now());
+		}
 
 		return true;
 	}
@@ -1726,17 +2330,24 @@
 		ctx.stroke();
 	}
 
+	
+
 	function drawTickerRows(now: number, boot: number) {
-		if (!hasRenderer()) return;
+		if (!hasRenderer() || !introReady) return;
+
+		const bgAmount = introSceneAmount(now);
+		if (bgAmount <= 0.001) return;
 
 		let sectionStartedAt = profileStart();
 		if (gpuRenderer) {
+			gpuRenderer.setStaticGlyphOpacity(bgAmount);
 			gpuRenderer.flushStaticGlyphs();
 		} else if (staticTickerLayer && ctx) {
-			ctx.globalAlpha = 1;
+			ctx.globalAlpha = bgAmount;
 			ctx.drawImage(staticTickerLayer, 0, 0, width, height);
+			ctx.globalAlpha = 1;
 		} else {
-			const baseAlpha = width < MOBILE_BREAKPOINT ? 0.18 : 0.38;
+			const baseAlpha = (width < MOBILE_BREAKPOINT ? 0.18 : 0.38) * bgAmount;
 			for (let rowIndex = 0; rowIndex < tickerRows.length; rowIndex++) {
 				drawTickerRowGlyphs(ctx, tickerRows[rowIndex], rowIndex, 0, boot, baseAlpha);
 			}
@@ -1744,7 +2355,7 @@
 		profileEnd('ticker: static layer', sectionStartedAt);
 
 		sectionStartedAt = profileStart();
-		const burstAlpha = width < MOBILE_BREAKPOINT ? 0.14 : 0.28;
+		const burstAlpha = (width < MOBILE_BREAKPOINT ? 0.14 : 0.28) * bgAmount;
 
 		for (let rowIndex = 0; rowIndex < tickerRows.length; rowIndex++) {
 			const row = tickerRows[rowIndex];
@@ -1758,14 +2369,17 @@
 		if (ctx) ctx.globalAlpha = 1;
 	}
 
-	function drawDoubleHelix(now: number, boot: number) {
-		// Derived from all proposals: helix is decorative, so quality drops sacrifice it first.
+
+
+	function drawDoubleHelix(now: number, _boot: number) {
+		// Decorative; sacrifice it first when quality drops.
 		if (!hasRenderer() || reduceMotion || width < 1024 || qualityLevel <= 0) return;
 
-		const elapsed = now - bootTime - HELIX_START_DELAY;
-		if (elapsed < 0) return;
+		const intro = introTimeline(now);
+		const opacity = intro.helixProgress;
+		if (opacity <= 0.001) return;
 
-		const opacity = boot * easeOutCubic(elapsed / 900);
+		const elapsed = Math.max(0, now - bootTime - introDurations().helixStart);
 		const raceAHead = clamp((elapsed - 80) / 1320, 0, 1);
 		const raceBHead = clamp((elapsed - 290) / 1840, 0, 1);
 		if (raceAHead <= 0 && raceBHead <= 0) return;
@@ -1863,19 +2477,32 @@
 		if (ctx) ctx.globalAlpha = 1;
 	}
 
+	
+
 	function drawBackground(now: number, boot: number) {
 		if (!hasRenderer()) return;
 
+		const bgAmount = introSceneAmount(now);
+
 		let sectionStartedAt = profileStart();
-		if (gpuRenderer) {
-			// User-requested GPU migration: background/grid are shader-rendered in beginFrame().
-		} else if (staticBackgroundLayer && ctx) {
+		if (!gpuRenderer && ctx) {
 			ctx.globalAlpha = 1;
-			ctx.drawImage(staticBackgroundLayer, 0, 0, width, height);
-		} else if (ctx) {
-			ctx.fillStyle = '#161713';
+			ctx.fillStyle = '#050504';
 			ctx.fillRect(0, 0, width, height);
-			drawRegularGrid(boot);
+
+			if (bgAmount > 0.001) {
+				ctx.globalAlpha = bgAmount;
+
+				if (staticBackgroundLayer) {
+					ctx.drawImage(staticBackgroundLayer, 0, 0, width, height);
+				} else {
+					ctx.fillStyle = '#161713';
+					ctx.fillRect(0, 0, width, height);
+					drawRegularGrid(boot);
+				}
+
+				ctx.globalAlpha = 1;
+			}
 		}
 		profileEnd('background: cached layer/grid', sectionStartedAt);
 
@@ -1887,6 +2514,8 @@
 		drawDoubleHelix(now, boot);
 		profileEnd('background: double helix', sectionStartedAt);
 	}
+
+
 
 
 	function drawDensityGlyphCluster(
@@ -1928,22 +2557,21 @@
 
 	function letterSwapProgress(now: number, particle: Particle) {
 		if (
-			!activeVisualEvent ||
-			activeVisualEvent.kind !== 'letter-swap' ||
+			!activeLetterSwapEvent ||
 			particle.role !== 'main' ||
 			particle.charIndex < 0 ||
-			!activeVisualEvent.targets.has(particle.charIndex)
+			!activeLetterSwapEvent.targets.has(particle.charIndex)
 		) {
 			return -1;
 		}
 
-		const elapsed = now - activeVisualEvent.startedAt;
+		const elapsed = now - activeLetterSwapEvent.startedAt;
 
-		if (elapsed < 0 || elapsed >= activeVisualEvent.duration) {
+		if (elapsed < 0 || elapsed >= activeLetterSwapEvent.duration) {
 			return -1;
 		}
 
-		return elapsed / activeVisualEvent.duration;
+		return elapsed / activeLetterSwapEvent.duration;
 	}
 
 	function glyphForLetterSwap(particle: Particle, particleIndex: number, seed: number, progress: number) {
@@ -1951,52 +2579,25 @@
 
 		if (progress < 0) return normal;
 
-		const eventSeed = activeVisualEvent?.seed ?? seed;
-		const useBlock = pseudoRandomBool(eventSeed, particle.charIndex, LETTER_SWAP_TRANSITION_BLOCK_CHANCE);
-		const replacementTexture = pseudoRandomGlyph(eventSeed, particle.charIndex, particleIndex);
+		// Pure roll:
+		// - no block glyph intro
+		// - no colour shift
+		// - no density transition
+		// - same timing for the whole title
+		// - random texture changes every few frames
+		if (progress >= 0.84) return normal;
 
-		/*
-			The large character shape stays readable because the particle positions still form the
-			big letter. The small glyphs inside that shape are pseudo-random and stable, not just
-			the same letter repeated.
-		*/
-		if (progress < LETTER_SWAP_IN_END) {
-			const intro = progress / LETTER_SWAP_IN_END;
-
-			if (intro < 0.42) {
-				return useBlock
-					? blockGlyphAt(seed + particle.charIndex * 5 + particleIndex)
-					: randomLetterAt(seed + particle.charIndex * 17 + particleIndex + Math.floor(intro * 18));
-			}
-
-			return replacementTexture;
-		}
-
-		if (progress < LETTER_SWAP_HOLD_END) {
-			return replacementTexture;
-		}
-
-		if (progress < LETTER_SWAP_OUT_END) {
-			const outro = (progress - LETTER_SWAP_HOLD_END) / (LETTER_SWAP_OUT_END - LETTER_SWAP_HOLD_END);
-
-			if (outro < 0.4) return replacementTexture;
-
-			if (outro < 0.72) {
-				return useBlock
-					? blockGlyphAt(seed + particle.charIndex * 9 + particleIndex)
-					: randomLetterAt(seed + particle.charIndex * 23 + particleIndex + Math.floor(outro * 26));
-			}
-		}
-
-		return normal;
+		const eventSeed = activeLetterSwapEvent?.seed ?? seed;
+		const rollFrame = Math.floor(progress * 34);
+		return pseudoRandomGlyph(eventSeed + rollFrame * 211.13, particle.charIndex, particleIndex);
 	}
 
 	function shouldDrawAllParticles(now: number, blockProgress: number) {
 		if (gpuRenderer) return true;
 
-		const booting = !reduceMotion && now - bootTime < STATIC_PARTICLE_BOOT_MS;
+		const introRunning = !reduceMotion && !introSequenceDone(now);
 		const blockAnimating = blockStart > 0 || blockProgress > 0.01;
-		return booting || blockAnimating;
+		return introRunning || blockAnimating;
 	}
 
 	function canUseStaticParticles(now: number, hoverField: DensityField | null, reboundField: DensityField | null, blockProgress: number) {
@@ -2004,11 +2605,13 @@
 
 		return Boolean(
 			staticParticleLayer &&
+				introSequenceDone(now) &&
 				!shouldDrawAllParticles(now, blockProgress) &&
 				!hoverField &&
 				!reboundField &&
 				clickRipples.length === 0 &&
-				!activeVisualEvent
+				!activeLetterSwapEvent &&
+				!activeColorLifeEvent
 		);
 	}
 
@@ -2063,16 +2666,13 @@
 		for (let loopIndex = 0; loopIndex < loopLength; loopIndex++) {
 			const i = drawAllParticles ? loopIndex : dynamicParticleIndexes[loopIndex];
 			const particle = particles[i];
-			const localBoot = drawAllParticles && !reduceMotion ? easeOutCubic((now - bootTime - particle.delay) / 1300) : 1;
-			const settle = drawAllParticles ? Math.max(boot, localBoot) : 1;
-			const wobble =
-				drawAllParticles && now - bootTime < STATIC_PARTICLE_BOOT_MS
-					? Math.sin(now * 0.0009 + particle.phase) * (particle.role === 'signature' ? 0.35 : 0.6) * (1 - blockProgress)
-					: 0;
-			const settledX = particle.startX + (particle.homeX - particle.startX) * settle;
-			const settledY = particle.startY + (particle.homeY - particle.startY) * settle;
-			const x = settledX + (particle.homeX - settledX) * blockProgress;
-			const y = settledY + (particle.homeY - settledY) * blockProgress + wobble;
+			const typeProgress = particleTypeProgress(now, particle);
+			if (typeProgress <= 0.01) continue;
+
+			const typeAlpha = typeProgress;
+			const settle = 1;
+			const x = particle.homeX;
+			const y = particle.homeY;
 
 			const hoverAmount = hoverInfluence[i] ?? 0;
 			const reboundAmount = reboundInfluence[i] ?? 0;
@@ -2084,7 +2684,8 @@
 				strongestHoverY = hoverField.y;
 			}
 
-			const reveal = reduceMotion ? 1 : clamp((now - bootTime - particle.delay) / 820, 0, 1);
+			const intro = introTimeline(now);
+			const reveal = intro.done ? 1 : Math.min(1, typeAlpha * (0.72 + intro.pageProgress * 0.28));
 			const rollSeed = particle.rollSeed;
 			const lockOrder = particle.lockOrder;
 
@@ -2104,11 +2705,11 @@
 
 			const letterSwapProgressValue = letterSwapProgress(now, particle);
 			const letterSwapActive = letterSwapProgressValue >= 0 && hoverAmount <= 0.02 && reboundAmount <= 0.03 && !clickTransition;
-			const letterSwapAmount = letterSwapActive ? Math.sin(letterSwapProgressValue * Math.PI) : 0;
+			const letterSwapAmount = 0;
 			const colorLifeAmount = colorLifeInfluence[i] ?? 0;
 			const clickRippleAmount = rippleInfluence[i] ?? 0;
 
-			const roleBoost = particle.role === 'signature' ? 1.42 : 1;
+			const roleBoost = particle.role === 'signature' ? 1.95 : 1;
 			const alpha = Math.min(
 				1,
 				particle.alpha *
@@ -2134,7 +2735,7 @@
 							? colorSteps[3]
 							: colorSteps[0];
 
-			const fill = letterSwapActive ? colorSteps[4] ?? accentColor : baseFill;
+			const fill = baseFill;
 			const fontSize = particle.baseFontSize;
 
 			const normalGlyph = letterSwapActive
@@ -2155,7 +2756,7 @@
 					HOVER_MAX_FONT,
 					HOVER_MIN_DENSITY,
 					HOVER_MAX_DENSITY,
-					particle.literalGlyph
+					null
 				);
 				continue;
 			}
@@ -2188,7 +2789,7 @@
 					CLICK_DENSITY_MAX_FONT,
 					CLICK_DENSITY_MIN_COUNT,
 					CLICK_DENSITY_MAX_COUNT,
-					isBlocked ? blockGlyphAt(i) : particle.literalGlyph
+					isBlocked ? blockGlyphAt(i) : null
 				);
 				continue;
 			}
@@ -2205,9 +2806,20 @@
 					: normalGlyph;
 
 			const drawAlpha = isBlocked ? 0.9 : rippleBlocifying ? Math.min(0.94, alpha + rippleBlockAmount * CLICK_RIPPLE_BLOCK_ALPHA) : alpha;
+
+			if (particle.role === 'signature' && !isBlocked && !rippleBlocifying) {
+				drawGlyph(ctx, glyph, x, y, fill, fontSize + 0.35, Math.min(1, alpha * 0.94));
+				drawGlyph(ctx, particle.baseGlyph, x, y, fill, Math.max(3.4, fontSize - 0.55), Math.min(0.36, alpha * 0.32));
+				continue;
+			}
+
 			drawGlyph(ctx, glyph, x, y, fill, fontSize, drawAlpha);
 		}
 		profileEnd('particles: dynamic loop', sectionStartedAt);
+
+		sectionStartedAt = profileStart();
+		drawTypewriterCursors(now);
+		profileEnd('particles: typewriter cursors', sectionStartedAt);
 
 		sectionStartedAt = profileStart();
 		if (hoverField && strongestHover > 0.035) {
@@ -2238,13 +2850,21 @@
 		if (ctx) ctx.globalAlpha = 1;
 	}
 
+	
 	function draw(now: number) {
 		if (!hasRenderer()) return;
 
 		const frameStart = performance.now();
-		const boot = reduceMotion ? 1 : easeOutCubic((now - bootTime) / 1500);
+		const intro = introTimeline(now);
+		syncExternalRevealTargets(now);
+		const boot = reduceMotion || bootTime <= 0 ? 1 : easeOutCubic((now - bootTime) / 1500);
 
-		gpuRenderer?.beginFrame();
+		if (gpuRenderer) {
+			const backgroundStrength = reduceMotion ? 1 : clamp(intro.backgroundProgress, 0, 1);
+
+			gpuRenderer.setBackgroundStrength(backgroundStrength);
+			gpuRenderer.beginFrame();
+		}
 
 		let sectionStartedAt = profileStart();
 		drawBackground(now, boot);
@@ -2315,8 +2935,9 @@
 		raf = requestAnimationFrame(tick);
 	}
 
+	
 	function start() {
-		if (running || reduceMotion || !visible || document.visibilityState === 'hidden') return;
+		if (running || reduceMotion || !introReady || !visible || document.visibilityState === 'hidden') return;
 
 		running = true;
 		lastFrame = 0;
@@ -2341,6 +2962,111 @@
 	}
 
 	onMount(() => {
+		let disposed = false;
+
+		introReady = false;
+		bootTime = 0;
+		document.documentElement.classList.add('hero-intro-active');
+		document.documentElement.style.setProperty('--hero-page-reveal', '0');
+		document.documentElement.style.setProperty('--hero-page-blur', '10px');
+		document.documentElement.style.setProperty('--hero-page-y', '0px');
+
+		const nextAnimationFrame = () =>
+			new Promise<void>((resolve) => {
+				requestAnimationFrame(() => resolve());
+			});
+
+		const waitForWindowLoad = () => {
+			if (document.readyState === 'complete') return Promise.resolve();
+
+			return new Promise<void>((resolve) => {
+				window.addEventListener('load', () => resolve(), { once: true });
+			});
+		};
+
+		const waitForCriticalImages = async () => {
+			const images = Array.from(document.images).filter((img) => {
+				const rect = img.getBoundingClientRect();
+
+				return (
+					rect.width > 0 &&
+					rect.height > 0 &&
+					rect.top < window.innerHeight * 1.35 &&
+					rect.bottom > -window.innerHeight * 0.25
+				);
+			});
+
+			await Promise.all(
+				images.map(
+					(img) =>
+						new Promise<void>((resolve) => {
+							if (img.complete && img.naturalWidth > 0) {
+								const decode = img.decode?.();
+
+								if (decode) {
+									decode.then(() => resolve()).catch(() => resolve());
+								} else {
+									resolve();
+								}
+
+								return;
+							}
+
+							const done = () => resolve();
+							img.addEventListener('load', done, { once: true });
+							img.addEventListener('error', done, { once: true });
+						})
+				)
+			);
+		};
+
+		const waitForStableIntroLayout = async () => {
+			let stableFrames = 0;
+			let previous = '';
+
+			for (let frame = 0; frame < 16; frame++) {
+				await nextAnimationFrame();
+
+				const current = [
+					window.innerWidth,
+					window.innerHeight,
+					document.body.scrollWidth,
+					document.body.scrollHeight,
+					root?.clientWidth ?? 0,
+					root?.clientHeight ?? 0
+				].join('|');
+
+				if (current === previous) {
+					stableFrames += 1;
+				} else {
+					stableFrames = 0;
+					previous = current;
+				}
+
+				if (stableFrames >= 3) break;
+			}
+		};
+
+		const waitForIntroReadiness = async () => {
+			await waitForWindowLoad();
+
+			const fontReady = (document as Document & { fonts?: { ready?: Promise<unknown> } }).fonts?.ready;
+			await fontReady?.catch(() => undefined);
+
+			await nextAnimationFrame();
+			await nextAnimationFrame();
+
+			if (disposed) return;
+
+			introReady = true;
+			introStartAt = performance.now() + TYPE_START_DELAY_MS;
+			bootTime = introStartAt;
+			sampleTextCache.clear();
+			setupCanvas();
+			draw(performance.now());
+			syncRunningState();
+		};
+
 		reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 		setupUrlConfig();
 		setupPerfPanel();
@@ -2436,13 +3162,20 @@
 		canvas.addEventListener('click', onClick);
 
 		if (reduceMotion) {
+			introReady = true;
+			introStartAt = performance.now();
+			bootTime = introStartAt;
+			setupCanvas();
 			draw(performance.now());
 		} else {
 			syncRunningState();
+			void waitForIntroReadiness();
 		}
 
 		return () => {
+			disposed = true;
 			stop();
+			cleanupExternalRevealTargets();
 			clearVisualEventTimer();
 			cancelAnimationFrame(resizeRaf);
 			observer?.disconnect();
@@ -2508,5 +3241,98 @@
 
 	.perf-panel.active {
 		display: block;
+	}
+
+	:global(.hero-reveal-target),
+	:global([data-hero-reveal]) {
+		opacity: 0;
+		filter: blur(18px);
+		transform: translate3d(0, 18px, 0);
+		pointer-events: none;
+		animation: none !important;
+		transition: none !important;
+		will-change: opacity, filter, transform;
+	}
+
+	.terminal-field {
+		z-index: 0;
+		isolation: isolate;
+	}
+
+	.terminal-field > canvas:first-child {
+		position: absolute;
+		inset: 0;
+		z-index: 2;
+	}
+
+	:global(html.hero-intro-ready:not(.hero-intro-done) .terminal-field) {
+		z-index: 999;
+		pointer-events: none;
+	}
+
+	:global(html.hero-intro-done .terminal-field) {
+		z-index: 0;
+		pointer-events: auto;
+	}
+
+
+	/* Final hero intro reveal:
+	   - header/buttons/footer are dark from first paint
+	   - reveal is uniform, not bottom-to-top
+	   - brightness is clamped to final brightness, never above 1
+	   - canvas/helix are not filter-brightened */
+	:global(.site-header),
+	:global(.site-footer),
+	:global(.terminal-actions),
+	:global(.terminal-intro),
+	:global(.hero-reveal-target),
+	:global([data-hero-reveal]) {
+		opacity: 0;
+		filter: blur(14px);
+		transform: translate3d(0, 0, 0) !important;
+		pointer-events: none;
+		animation: none !important;
+		transition: none !important;
+		will-change: opacity, filter;
+	}
+
+	:global(html.hero-intro-done .site-header),
+	:global(html.hero-intro-done .site-footer),
+	:global(html.hero-intro-done .terminal-actions),
+	:global(html.hero-intro-done .terminal-intro),
+	:global(html.hero-intro-done .hero-reveal-target),
+	:global(html.hero-intro-done [data-hero-reveal]) {
+		opacity: 1;
+		filter: none;
+		transform: translate3d(0, 0, 0) !important;
+		pointer-events: auto;
+	}
+
+
+	
+	/* Intro reveal: opacity + blur only. No brightness, no fly-in, no pop. */
+	:global(html.hero-intro-active .site-header),
+	:global(html.hero-intro-active .site-footer),
+	:global(html.hero-intro-active .terminal-actions),
+	:global(html.hero-intro-active .terminal-intro),
+	:global(html.hero-intro-active .hero-reveal-target),
+	:global(html.hero-intro-active [data-hero-reveal]) {
+		opacity: var(--hero-page-reveal, 0) !important;
+		filter: blur(var(--hero-page-blur, 8px)) !important;
+		transform: none !important;
+		pointer-events: none !important;
+		animation: none !important;
+		transition: none !important;
+	}
+
+	:global(html.hero-intro-active.hero-intro-done .site-header),
+	:global(html.hero-intro-active.hero-intro-done .site-footer),
+	:global(html.hero-intro-active.hero-intro-done .terminal-actions),
+	:global(html.hero-intro-active.hero-intro-done .terminal-intro),
+	:global(html.hero-intro-active.hero-intro-done .hero-reveal-target),
+	:global(html.hero-intro-active.hero-intro-done [data-hero-reveal]) {
+		opacity: 1 !important;
+		filter: none !important;
+		pointer-events: auto !important;
 	}
 </style>
