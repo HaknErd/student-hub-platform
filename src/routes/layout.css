@@ -4447,65 +4447,120 @@ body,
 }
 
 
-/* Final hero reveal clamp backup: opacity/blur only, never brightness. */
+
+
+
+/* ---- Final hero intro reveal: opacity+blur only, never brightness ---- */
 html.hero-intro-active .site-header,
 html.hero-intro-active .site-footer,
 html.hero-intro-active .terminal-actions,
 html.hero-intro-active .terminal-intro,
 html.hero-intro-active .hero-reveal-target,
 html.hero-intro-active [data-hero-reveal] {
-	opacity: clamp(0, var(--hero-page-reveal, 0), 1) !important;
-	filter: blur(var(--hero-page-blur, 10px)) !important;
-	transform: translate3d(0, 0, 0) !important;
-	pointer-events: none !important;
-	animation: none !important;
-	transition: none !important;
-}
-
-html.hero-intro-active.hero-intro-done .site-header,
-html.hero-intro-active.hero-intro-done .site-footer,
-html.hero-intro-active.hero-intro-done .terminal-actions,
-html.hero-intro-active.hero-intro-done .terminal-intro,
-html.hero-intro-active.hero-intro-done .hero-reveal-target,
-html.hero-intro-active.hero-intro-done [data-hero-reveal] {
-	opacity: 1 !important;
-	filter: none !important;
-	transform: translate3d(0, 0, 0) !important;
-	pointer-events: auto !important;
-}
-
-
-/* ---- Hero intro: ALL page content reveals together, opacity+blur only ---- */
-html.hero-intro-active .site-header,
-html.hero-intro-active .site-footer,
-html.hero-intro-active .app-main,
-html.hero-intro-active .hero-reveal-target,
-html.hero-intro-active [data-hero-reveal] {
 	opacity: var(--hero-page-reveal, 0) !important;
-	filter: blur(var(--hero-page-blur, 8px)) !important;
-	transform: none !important;
+	filter: blur(var(--hero-page-blur, 7px)) !important;
+	transform: translate3d(0, 0, 0) !important;
 	pointer-events: none !important;
 	animation: none !important;
 	transition: none !important;
 	will-change: opacity, filter;
 }
 
-html.hero-intro-active.hero-intro-done .site-header,
-html.hero-intro-active.hero-intro-done .site-footer,
-html.hero-intro-active.hero-intro-done .app-main,
-html.hero-intro-active.hero-intro-done .hero-reveal-target,
-html.hero-intro-active.hero-intro-done [data-hero-reveal] {
+html.hero-intro-active .site-header,
+html.hero-intro-active .terminal-actions {
+	filter: none !important;
+	overflow: visible !important;
+}
+
+html.hero-intro-active .terminal-actions > * {
 	opacity: 1 !important;
 	filter: none !important;
-	transform: none !important;
+	transform: translate3d(0, 0, 0) !important;
+	animation: none !important;
+	transition: none !important;
+}
+
+html.hero-intro-done .site-header,
+html.hero-intro-done .site-footer,
+html.hero-intro-done .terminal-actions,
+html.hero-intro-done .terminal-intro,
+html.hero-intro-done .hero-reveal-target,
+html.hero-intro-done [data-hero-reveal] {
+	opacity: 1 !important;
+	filter: none !important;
+	transform: translate3d(0, 0, 0) !important;
 	pointer-events: auto !important;
-	animation: unset;
-	transition: unset;
+}
+
+html,
+body,
+.app-shell {
+	max-width: 100%;
+	overflow-x: clip;
+}
+
+@supports not (overflow: clip) {
+	html,
+	body,
+	.app-shell {
+		overflow-x: hidden;
+	}
 }
 
 
-/* Overflow guard */
-html, body, .app-shell {
+/* ---- Final hero intro reveal: opacity + blur only, no brightness, no app-main gating ---- */
+html.hero-intro-active .site-header,
+html.hero-intro-active .site-footer,
+html.hero-intro-active .terminal-actions,
+html.hero-intro-active .terminal-intro,
+html.hero-intro-active .hero-reveal-target,
+html.hero-intro-active [data-hero-reveal] {
+	opacity: var(--hero-page-reveal, 0) !important;
+	filter: blur(var(--hero-page-blur, 7px)) !important;
+	transform: translate3d(0, 0, 0) !important;
+	pointer-events: none !important;
+	animation: none !important;
+	transition: none !important;
+	will-change: opacity, filter;
+}
+
+html.hero-intro-active .site-header,
+html.hero-intro-active .terminal-actions {
+	filter: none !important;
+	overflow: visible !important;
+}
+
+html.hero-intro-active .terminal-actions > * {
+	opacity: 1 !important;
+	filter: none !important;
+	transform: translate3d(0, 0, 0) !important;
+	animation: none !important;
+	transition: none !important;
+}
+
+html.hero-intro-done .site-header,
+html.hero-intro-done .site-footer,
+html.hero-intro-done .terminal-actions,
+html.hero-intro-done .terminal-intro,
+html.hero-intro-done .hero-reveal-target,
+html.hero-intro-done [data-hero-reveal] {
+	opacity: 1 !important;
+	filter: none !important;
+	transform: translate3d(0, 0, 0) !important;
+	pointer-events: auto !important;
+}
+
+html,
+body,
+.app-shell {
 	max-width: 100%;
 	overflow-x: clip;
+}
+
+@supports not (overflow: clip) {
+	html,
+	body,
+	.app-shell {
+		overflow-x: hidden;
+	}
 }

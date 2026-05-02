@@ -63,7 +63,7 @@ export const MOBILE_TITLE_TOP_Y = 0.29;
 export const MOBILE_TITLE_LINE_GAP_Y = 0.15;
 export const MOBILE_NAME_Y = 0.66;
 export const MOBILE_TITLE_FONT_SCALE = 0.24;
-export const MOBILE_NAME_FONT_SCALE = 0.135;
+export const MOBILE_NAME_FONT_SCALE = 0.18;
 export const MOBILE_RIGHT_PADDING = 8;
 
 export const MOBILE_TEXT_SAMPLE_MAIN_STEP_X = 3;

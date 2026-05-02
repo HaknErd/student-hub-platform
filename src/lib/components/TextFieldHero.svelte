@@ -559,13 +559,41 @@ const PERF_PANEL_WIDTH = 236;
 		if (typeof document === 'undefined') return;
 
 		const intro = introTimeline(now);
-		const amount = reduceMotion ? 1 : clamp(intro.pageProgress, 0, 1);
-		const blur = (1 - amount) * 8;
+		const rawAmount = reduceMotion || intro.done ? 1 : clamp(intro.pageProgress, 0, 1);
+		const amount = intro.done ? 1 : smoothIntroCurve(rawAmount);
+		const normalBlur = (1 - amount) * 7;
 		const rootElement = document.documentElement;
 
 		rootElement.classList.add('hero-intro-active');
 		rootElement.style.setProperty('--hero-page-reveal', amount.toFixed(4));
-		rootElement.style.setProperty('--hero-page-blur', `${blur.toFixed(2)}px`);
+		rootElement.style.setProperty('--hero-page-blur', `${normalBlur.toFixed(2)}px`);
+
+		const revealTargets = document.querySelectorAll<HTMLElement>(
+			'.site-header, .site-footer, .terminal-actions, .terminal-intro, .hero-reveal-target, [data-hero-reveal]'
+		);
+
+		for (const target of revealTargets) {
+			const noBlur = target.classList.contains('terminal-actions') || target.classList.contains('site-header');
+
+			target.style.opacity = amount.toFixed(4);
+			target.style.filter = amount >= 0.999 || noBlur ? 'none' : `blur(${normalBlur.toFixed(2)}px)`;
+			target.style.transform = 'translate3d(0, 0, 0)';
+			target.style.pointerEvents = amount >= 0.98 ? '' : 'none';
+			target.style.animation = 'none';
+			target.style.transition = 'none';
+			target.style.overflow = target.classList.contains('terminal-actions') ? 'visible' : '';
+			target.style.willChange = amount >= 0.999 ? 'auto' : 'opacity, filter';
+		}
+
+		const actionChildren = document.querySelectorAll<HTMLElement>('.terminal-actions > *');
+		for (const child of actionChildren) {
+			child.style.opacity = '1';
+			child.style.filter = 'none';
+			child.style.transform = 'translate3d(0, 0, 0)';
+			child.style.animation = 'none';
+			child.style.transition = 'none';
+			child.style.willChange = 'auto';
+		}
 
 		rootElement.classList.toggle('hero-intro-ready', introReady);
 		rootElement.classList.toggle('hero-intro-typing', introReady && !intro.typeDone);
@@ -583,6 +611,7 @@ const PERF_PANEL_WIDTH = 236;
 
 
 
+
 	
 	function cleanupExternalRevealTargets() {
 		if (typeof document === 'undefined') return;
@@ -591,9 +620,11 @@ const PERF_PANEL_WIDTH = 236;
 		rootElement.classList.remove('hero-intro-active', 'hero-intro-ready', 'hero-intro-typing', 'hero-intro-revealing', 'hero-intro-done');
 		rootElement.style.removeProperty('--hero-page-reveal');
 		rootElement.style.removeProperty('--hero-page-blur');
-		rootElement.style.removeProperty('--hero-page-y');
 
-		const targets = document.querySelectorAll<HTMLElement>('.site-header, .site-footer, .terminal-actions, .terminal-intro, .hero-reveal-target, [data-hero-reveal]');
+		const targets = document.querySelectorAll<HTMLElement>(
+			'.site-header, .site-footer, .terminal-actions, .terminal-actions > *, .terminal-intro, .hero-reveal-target, [data-hero-reveal]'
+		);
+
 		for (const target of targets) {
 			target.style.opacity = '';
 			target.style.filter = '';
@@ -601,8 +632,11 @@ const PERF_PANEL_WIDTH = 236;
 			target.style.pointerEvents = '';
 			target.style.animation = '';
 			target.style.transition = '';
+			target.style.overflow = '';
+			target.style.willChange = '';
 		}
 	}
+
 
 	function particleTypedIn(now: number, particle: Particle) {
 		return particleTypeProgress(now, particle) > 0.01;
@@ -1008,7 +1042,7 @@ function introTextOpacity(_now: number) {
 
 		// Qwen: bake resting particles so idle frames do not loop through every glyph.
 		for (const particle of particles) {
-			const roleBoost = particle.role === 'signature' ? 2.1 : 1;
+			const roleBoost = particle.role === 'signature' ? 2.65 : 1;
 			const alpha = Math.min(1, particle.alpha * roleBoost);
 			drawGlyph(layerCtx, particle.role === 'signature' ? particle.literalGlyph : particle.baseGlyph, particle.homeX, particle.homeY, colorSteps[particle.baseFillIndex] ?? colorSteps[0], particle.baseFontSize, alpha);
 		}
@@ -1534,7 +1568,7 @@ for (let rowIndex = 0; rowIndex < tickerRows.length; rowIndex++) {
 
 		for (let py = startY; py < sample.height; py += stepY) {
 			for (let px = startX; px < sample.width; px += stepX) {
-				if (image[(py * sample.width + px) * 4 + 3] > 56) {
+				if (image[(py * sample.width + px) * 4 + 3] > 14) {
 					const x = snapX(px);
 					const y = snapY(py);
 					const cellKey = `${Math.round(x / CELL_X)}:${Math.round(y / CELL_Y)}`;
@@ -1704,9 +1738,9 @@ for (let rowIndex = 0; rowIndex < tickerRows.length; rowIndex++) {
 					signatureTopLabel,
 					fittedMonoFontSize(
 						signatureTopLabel,
-						width * (isTablet ? 0.56 : 0.34),
-						isTablet ? 24 : 34,
-						isTablet ? 40 : 52
+						width * (isTablet ? 0.70 : 0.50),
+						isTablet ? 34 : 46,
+						isTablet ? 54 : 72
 					),
 					signatureX,
 					signatureTopY,
@@ -1722,9 +1756,9 @@ for (let rowIndex = 0; rowIndex < tickerRows.length; rowIndex++) {
 						signatureBottomLabel,
 						fittedMonoFontSize(
 							signatureBottomLabel,
-							width * (isTablet ? 0.72 : 0.42),
-							isTablet ? 30 : 42,
-							isTablet ? 50 : 66
+							width * (isTablet ? 0.86 : 0.58),
+							isTablet ? 38 : 52,
+							isTablet ? 66 : 88
 						),
 						signatureX,
 						signatureBottomY,
@@ -1757,8 +1791,8 @@ for (let rowIndex = 0; rowIndex < tickerRows.length; rowIndex++) {
 		const main = points.main.filter((_, index) => index % mainStep === 0);
 		const maxSignatureBase =
 			width < MOBILE_BREAKPOINT
-				? clamp(Math.floor((width * height) / 180), 3200, 7200)
-				: clamp(Math.floor((width * height) / 190), 5600, 13000);
+				? clamp(Math.floor((width * height) / 105), 5200, 14000)
+				: clamp(Math.floor((width * height) / 115), 9800, 26000);
 		const maxSignature = Math.floor(maxSignatureBase * qualityScale);
 		const signatureStep = Math.max(1, Math.ceil(points.signature.length / maxSignature));
 		const signature = points.signature.filter((_, index) => index % signatureStep === 0);
@@ -1792,7 +1826,7 @@ for (let rowIndex = 0; rowIndex < tickerRows.length; rowIndex++) {
 				hideGate: ((index * 29) % 100) / 100,
 				baseGlyph: stableParticleGlyph(index + (role === 'signature' ? 100000 : 0), point.charIndex, homeX, homeY),
 				baseFillIndex: accent ? 3 : 0,
-				baseFontSize: role === 'signature' ? 6.2 : 5.1,
+				baseFontSize: role === 'signature' ? 7.1 : 5.1,
 				role
 			};
 		});
@@ -2709,7 +2743,7 @@ for (let rowIndex = 0; rowIndex < tickerRows.length; rowIndex++) {
 			const colorLifeAmount = colorLifeInfluence[i] ?? 0;
 			const clickRippleAmount = rippleInfluence[i] ?? 0;
 
-			const roleBoost = particle.role === 'signature' ? 1.95 : 1;
+			const roleBoost = particle.role === 'signature' ? 2.65 : 1;
 			const alpha = Math.min(
 				1,
 				particle.alpha *
@@ -2738,9 +2772,12 @@ for (let rowIndex = 0; rowIndex < tickerRows.length; rowIndex++) {
 			const fill = baseFill;
 			const fontSize = particle.baseFontSize;
 
-			const normalGlyph = letterSwapActive
-				? glyphForLetterSwap(particle, i, rollSeed, letterSwapProgressValue)
-				: particle.baseGlyph;
+			const normalGlyph =
+				particle.role === 'signature'
+					? particle.literalGlyph
+					: letterSwapActive
+						? glyphForLetterSwap(particle, i, rollSeed, letterSwapProgressValue)
+						: particle.baseGlyph;
 
 			if (clickHidden) continue;
 
@@ -2808,8 +2845,8 @@ for (let rowIndex = 0; rowIndex < tickerRows.length; rowIndex++) {
 			const drawAlpha = isBlocked ? 0.9 : rippleBlocifying ? Math.min(0.94, alpha + rippleBlockAmount * CLICK_RIPPLE_BLOCK_ALPHA) : alpha;
 
 			if (particle.role === 'signature' && !isBlocked && !rippleBlocifying) {
-				drawGlyph(ctx, glyph, x, y, fill, fontSize + 0.35, Math.min(1, alpha * 0.94));
-				drawGlyph(ctx, particle.baseGlyph, x, y, fill, Math.max(3.4, fontSize - 0.55), Math.min(0.36, alpha * 0.32));
+				drawGlyph(ctx, particle.literalGlyph, x, y, fill, fontSize + 0.85, Math.min(1, alpha));
+				drawGlyph(ctx, particle.literalGlyph, snapX(x + CELL_X * 0.28), y, fill, fontSize + 0.25, Math.min(0.68, alpha * 0.55));
 				continue;
 			}
 
@@ -3266,7 +3303,7 @@ for (let rowIndex = 0; rowIndex < tickerRows.length; rowIndex++) {
 	}
 
 	:global(html.hero-intro-ready:not(.hero-intro-done) .terminal-field) {
-		z-index: 999;
+		z-index: 0;
 		pointer-events: none;
 	}
 
@@ -3335,4 +3372,46 @@ for (let rowIndex = 0; rowIndex < tickerRows.length; rowIndex++) {
 		filter: none !important;
 		pointer-events: auto !important;
 	}
+
+	/* Final intro override: no brightness, no child fly-in, no button blur cutoff. */
+	:global(html.hero-intro-active .site-header),
+	:global(html.hero-intro-active .site-footer),
+	:global(html.hero-intro-active .terminal-actions),
+	:global(html.hero-intro-active .terminal-intro),
+	:global(html.hero-intro-active .hero-reveal-target),
+	:global(html.hero-intro-active [data-hero-reveal]) {
+		opacity: var(--hero-page-reveal, 0) !important;
+		filter: blur(var(--hero-page-blur, 7px)) !important;
+		transform: translate3d(0, 0, 0) !important;
+		pointer-events: none !important;
+		animation: none !important;
+		transition: none !important;
+	}
+
+	:global(html.hero-intro-active .site-header),
+	:global(html.hero-intro-active .terminal-actions) {
+		filter: none !important;
+		overflow: visible !important;
+	}
+
+	:global(html.hero-intro-active .terminal-actions > *) {
+		opacity: 1 !important;
+		filter: none !important;
+		transform: translate3d(0, 0, 0) !important;
+		animation: none !important;
+		transition: none !important;
+	}
+
+	:global(html.hero-intro-done .site-header),
+	:global(html.hero-intro-done .site-footer),
+	:global(html.hero-intro-done .terminal-actions),
+	:global(html.hero-intro-done .terminal-intro),
+	:global(html.hero-intro-done .hero-reveal-target),
+	:global(html.hero-intro-done [data-hero-reveal]) {
+		opacity: 1 !important;
+		filter: none !important;
+		transform: translate3d(0, 0, 0) !important;
+		pointer-events: auto !important;
+	}
+
 </style>
