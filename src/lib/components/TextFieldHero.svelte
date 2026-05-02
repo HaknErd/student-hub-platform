@@ -283,6 +283,20 @@
 		return Boolean(ctx || gpuRenderer);
 	}
 
+	function gridSafeDprFor(nativeDpr: number, hardCap: number, cssWidth: number, cssHeight: number) {
+		const cssMegapixels = (cssWidth * cssHeight) / 1_000_000;
+		const maxCanvasMegapixels = cssWidth < MOBILE_BREAKPOINT ? 2.2 : 8.5;
+		const allowed = [3, 2, 1.5, 1].filter((value) => value <= nativeDpr && value <= hardCap);
+
+		for (const candidate of allowed) {
+			if (cssMegapixels * candidate * candidate <= maxCanvasMegapixels) {
+				return candidate;
+			}
+		}
+
+		return allowed.at(-1) ?? 1;
+	}
+
 	function getMeasureContext() {
 		if (measureCtx) return measureCtx;
 
@@ -649,7 +663,7 @@
 
 		// Qwen: bake resting particles so idle frames do not loop through every glyph.
 		for (const particle of particles) {
-			const roleBoost = particle.role === 'signature' ? 1.42 : 1;
+			const roleBoost = particle.role === 'signature' ? 1.85 : 1.28;
 			const alpha = Math.min(1, particle.alpha * roleBoost);
 			drawGlyph(layerCtx, particle.baseGlyph, particle.homeX, particle.homeY, colorSteps[particle.baseFillIndex] ?? colorSteps[0], 7, alpha);
 		}
@@ -681,6 +695,20 @@
 
 			drawGlyph(target, glyphAt(glyphIndex), x + offset, y, color, 7, alpha);
 		}
+	}
+
+	function buildGpuStaticTickerLayer() {
+		if (!gpuRenderer) return;
+
+		gpuRenderer.beginStaticGlyphCapture();
+
+		const baseAlpha = width < MOBILE_BREAKPOINT ? 0.18 : 0.38;
+
+		for (let rowIndex = 0; rowIndex < tickerRows.length; rowIndex++) {
+			drawTickerRowGlyphs(ctx, tickerRows[rowIndex], rowIndex, 0, 1, baseAlpha);
+		}
+
+		gpuRenderer.endStaticGlyphCapture();
 	}
 
 	function buildStaticTickerLayer() {
@@ -1210,15 +1238,15 @@
 		// DeepSeek + Qwen + ChatGPT: use explicit device/quality particle budgets instead of one fixed density.
 		const maxMainBase =
 			width < MOBILE_BREAKPOINT
-				? clamp(Math.floor((width * height) / 460), 1400, 3200)
-				: clamp(Math.floor((width * height) / 620), 1100, 6400);
+				? clamp(Math.floor((width * height) / 300), 2600, 6200)
+				: clamp(Math.floor((width * height) / 260), 4200, 12000);
 		const maxMain = Math.floor(maxMainBase * qualityScale);
 		const mainStep = Math.max(1, Math.ceil(points.main.length / maxMain));
 		const main = points.main.filter((_, index) => index % mainStep === 0);
 		const maxSignatureBase =
 			width < MOBILE_BREAKPOINT
-				? clamp(Math.floor((width * height) / 820), 700, 1400)
-				: clamp(Math.floor((width * height) / 900), 700, 2200);
+				? clamp(Math.floor((width * height) / 360), 1800, 3600)
+				: clamp(Math.floor((width * height) / 320), 2600, 7000);
 		const maxSignature = Math.floor(maxSignatureBase * qualityScale);
 		const signatureStep = Math.max(1, Math.ceil(points.signature.length / maxSignature));
 		const signature = points.signature.filter((_, index) => index % signatureStep === 0);
@@ -1241,7 +1269,7 @@
 				startY: height + CELL_Y * (12 + (index % 16)),
 				phase: (index % 97) * 0.19,
 				delay: (index % 58) * 9,
-				alpha: role === 'signature' ? 0.86 + (index % 4) * 0.035 : 0.66 + (index % 5) * 0.045,
+				alpha: role === 'signature' ? 1.02 + (index % 4) * 0.02 : 0.82 + (index % 5) * 0.03,
 				glyph: glyphAt(index * 11),
 				literalGlyph: point.glyph,
 				charIndex: point.charIndex,
@@ -1250,8 +1278,9 @@
 				rollSeed,
 				lockOrder: ((index * 37) % 100) / 100,
 				hideGate: ((index * 29) % 100) / 100,
-				baseGlyph: stableParticleGlyph(index, point.charIndex, homeX, homeY),
+				baseGlyph: stableParticleGlyph(index + (role === 'signature' ? 100000 : 0), point.charIndex, homeX, homeY),
 				baseFillIndex: accent ? 3 : 0,
+				baseFontSize: role === 'signature' ? 4.2 : 5.1,
 				role
 			};
 		});
@@ -1583,9 +1612,12 @@
 		return qualityLevel <= 0 ? 2 : qualityLevel === 1 ? 3 : CLICK_RIPPLE_MAX_ACTIVE;
 	}
 
+	function isHugeCanvas() {
+		return width * height * dpr * dpr > 4_500_000;
+	}
+
 	function buildTickerRows() {
 		const rows: TickerRow[] = [];
-
 		for (let y = CELL_Y; y < height + CELL_Y; y += CELL_Y * 2) {
 			rows.push({
 				y,
@@ -1614,7 +1646,10 @@
 
 		width = nextWidth;
 		height = nextHeight;
-		dpr = Math.min(window.devicePixelRatio || 1, configuredDprCap ?? 3);
+		const nativeDpr = window.devicePixelRatio || 1;
+		const hardDprCap = configuredDprCap ?? 2;
+
+		dpr = gridSafeDprFor(nativeDpr, hardDprCap, width, height);
 		applyQualityFrameBudget();
 		staticBackgroundLayer = null;
 		staticTickerLayer = null;
@@ -1657,7 +1692,9 @@
 		skippedRafCallbacksTotal = 0;
 		activeVisualEvent = null;
 		buildTickerRows();
-		if (!gpuRenderer) {
+		if (gpuRenderer) {
+			buildGpuStaticTickerLayer();
+		} else {
 			buildStaticTickerLayer();
 		}
 		buildParticles();
@@ -1694,10 +1731,7 @@
 
 		let sectionStartedAt = profileStart();
 		if (gpuRenderer) {
-			const baseAlpha = width < MOBILE_BREAKPOINT ? 0.18 : 0.38;
-			for (let rowIndex = 0; rowIndex < tickerRows.length; rowIndex++) {
-				drawTickerRowGlyphs(ctx, tickerRows[rowIndex], rowIndex, 0, boot, baseAlpha);
-			}
+			gpuRenderer.flushStaticGlyphs();
 		} else if (staticTickerLayer && ctx) {
 			ctx.globalAlpha = 1;
 			ctx.drawImage(staticTickerLayer, 0, 0, width, height);
@@ -1796,11 +1830,11 @@
 			const strandBVisible = t <= raceBHead;
 
 			if (strandAVisible) {
-				drawStrandCluster(xA, yA, column + stepA, opacity * (0.24 + depthA * 0.48), colorSteps[stepA] ?? accentColor, 1);
+				drawStrandCluster(xA, yA, column + stepA, opacity * (0.10 + depthA * 0.20), colorSteps[stepA] ?? accentColor, 1);
 			}
 
 			if (strandBVisible) {
-				drawStrandCluster(xB, yB, column + stepB + 3, opacity * (0.2 + depthB * 0.4), colorSteps[stepB] ?? colorSteps[0], -1);
+				drawStrandCluster(xB, yB, column + stepB + 3, opacity * (0.09 + depthB * 0.18), colorSteps[stepB] ?? colorSteps[0], -1);
 			}
 
 			if (strandAVisible && strandBVisible && column % 5 === 0) {
@@ -1821,7 +1855,7 @@
 					const linkX = snapX(xA + (xB - xA) * linkT);
 					const linkY = snapY(yA + (yB - yA) * linkT);
 
-					drawGlyph(ctx, connector, linkX, linkY, colorSteps[3] ?? colorSteps[0], 8, opacity * 0.18);
+					drawGlyph(ctx, connector, linkX, linkY, colorSteps[3] ?? colorSteps[0], 8, opacity * 0.08);
 				}
 			}
 		}
@@ -2101,6 +2135,7 @@
 							: colorSteps[0];
 
 			const fill = letterSwapActive ? colorSteps[4] ?? accentColor : baseFill;
+			const fontSize = particle.baseFontSize;
 
 			const normalGlyph = letterSwapActive
 				? glyphForLetterSwap(particle, i, rollSeed, letterSwapProgressValue)
@@ -2129,13 +2164,13 @@
 				if (particle.hideGate < reboundAmount * BLOCK_REBOUND_HIDE_MAX) continue;
 
 				if (reboundAmount > 0.16) {
-					drawGlyph(ctx, blockGlyphAt(i + Math.floor(reboundAmount * 11)), x, y, fill, 7, alpha * (0.82 + reboundAmount * 0.3));
+					drawGlyph(ctx, blockGlyphAt(i + Math.floor(reboundAmount * 11)), x, y, fill, fontSize, alpha * (0.82 + reboundAmount * 0.3));
 
 					if (reboundAmount > 0.42) {
-						drawGlyph(ctx, blockGlyphAt(i + 3), snapX(x + CELL_X * 0.45), snapY(y), fill, 8, alpha * reboundAmount * 0.28);
+						drawGlyph(ctx, blockGlyphAt(i + 3), snapX(x + CELL_X * 0.45), snapY(y), fill, fontSize + 0.8, alpha * reboundAmount * 0.28);
 					}
 				} else {
-					drawGlyph(ctx, normalGlyph, x, y, fill, 7, alpha);
+					drawGlyph(ctx, normalGlyph, x, y, fill, fontSize, alpha);
 				}
 
 				continue;
@@ -2170,7 +2205,7 @@
 					: normalGlyph;
 
 			const drawAlpha = isBlocked ? 0.9 : rippleBlocifying ? Math.min(0.94, alpha + rippleBlockAmount * CLICK_RIPPLE_BLOCK_ALPHA) : alpha;
-			drawGlyph(ctx, glyph, x, y, fill, 7, drawAlpha);
+			drawGlyph(ctx, glyph, x, y, fill, fontSize, drawAlpha);
 		}
 		profileEnd('particles: dynamic loop', sectionStartedAt);
 

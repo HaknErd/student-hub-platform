@@ -20,6 +20,7 @@ export type Particle = {
 	hideGate: number;
 	baseGlyph: string;
 	baseFillIndex: number;
+	baseFontSize: number;
 	role: 'main' | 'signature';
 };
 

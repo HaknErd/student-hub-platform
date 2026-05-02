@@ -6,7 +6,7 @@
    Design Tokens
 ------------------------------ */
 @theme {
-	--color-accent: #ff9fb5;
+	--color-accent: #ff003c;
 	--color-accent-hover: #F49AC2;
 	--color-accent-contrast: #111111;
 	--color-primary: var(--color-accent);

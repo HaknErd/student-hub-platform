@@ -114,6 +114,7 @@ export class GpuGlyphRenderer {
 	private readonly backgroundProgram: WebGLProgram;
 	private readonly glyphVao: WebGLVertexArrayObject;
 	private readonly glyphInstanceBuffer: WebGLBuffer;
+	private readonly staticGlyphInstanceBuffer: WebGLBuffer;
 	private readonly atlasTexture: WebGLTexture;
 	private readonly backgroundBundle: ShaderBundle;
 	private readonly glyphUniforms: {
@@ -127,6 +128,9 @@ export class GpuGlyphRenderer {
 		cell: WebGLUniformLocation | null;
 	};
 	private glyphCount = 0;
+	private staticGlyphCount = 0;
+	private capturingStaticGlyphs = false;
+	private readonly staticGlyphData: Float32Array;
 	private width = 1;
 	private height = 1;
 	private dpr = 1;
@@ -161,14 +165,16 @@ export class GpuGlyphRenderer {
 		this.gl = gl;
 		this.maxGlyphs = maxGlyphs;
 		this.glyphData = new Float32Array(maxGlyphs * GLYPH_STRIDE);
+		this.staticGlyphData = new Float32Array(maxGlyphs * GLYPH_STRIDE);
 
 		const backgroundProgram = createProgram(gl, BACKGROUND_VERTEX_SHADER, BACKGROUND_FRAGMENT_SHADER);
 		const glyphProgram = createProgram(gl, GLYPH_VERTEX_SHADER, GLYPH_FRAGMENT_SHADER);
 		const glyphVao = gl.createVertexArray();
 		const glyphInstanceBuffer = gl.createBuffer();
+		const staticGlyphInstanceBuffer = gl.createBuffer();
 		const atlasTexture = gl.createTexture();
 
-		if (!backgroundProgram || !glyphProgram || !glyphVao || !glyphInstanceBuffer || !atlasTexture) {
+		if (!backgroundProgram || !glyphProgram || !glyphVao || !glyphInstanceBuffer || !staticGlyphInstanceBuffer || !atlasTexture) {
 			throw new Error('Unable to initialize WebGL2 renderer resources.');
 		}
 
@@ -176,6 +182,7 @@ export class GpuGlyphRenderer {
 		this.glyphProgram = glyphProgram;
 		this.glyphVao = glyphVao;
 		this.glyphInstanceBuffer = glyphInstanceBuffer;
+		this.staticGlyphInstanceBuffer = staticGlyphInstanceBuffer;
 		this.atlasTexture = atlasTexture;
 		this.backgroundBundle = { program: backgroundProgram };
 		this.glyphUniforms = {
@@ -215,33 +222,70 @@ export class GpuGlyphRenderer {
 
 	// Qwen + Claude Sonnet: batch glyph draws into GPU instances instead of changing Canvas 2D state per glyph.
 	drawGlyph(glyph: string, x: number, y: number, color: string, fontSize: number, alpha: number) {
-		if (alpha <= 0 || this.glyphCount >= this.maxGlyphs) return;
+		const targetCount = this.capturingStaticGlyphs ? this.staticGlyphCount : this.glyphCount;
+		if (alpha <= 0 || targetCount >= this.maxGlyphs) return;
 
 		const uv = this.glyphUvs.get(glyph) ?? this.glyphUvs.get('.') ?? this.glyphUvs.values().next().value;
 		if (!uv) return;
 
 		const parsed = this.colorFor(color);
-		const offset = this.glyphCount * GLYPH_STRIDE;
+		const target = this.capturingStaticGlyphs ? this.staticGlyphData : this.glyphData;
+		const offset = targetCount * GLYPH_STRIDE;
 		const width = Math.max(4, fontSize + 8);
 		const height = Math.max(6, fontSize * 2.4 + 8);
 
-		this.glyphData[offset] = x;
-		this.glyphData[offset + 1] = y;
-		this.glyphData[offset + 2] = width;
-		this.glyphData[offset + 3] = height;
-		this.glyphData[offset + 4] = uv.u0;
-		this.glyphData[offset + 5] = uv.v0;
-		this.glyphData[offset + 6] = uv.u1;
-		this.glyphData[offset + 7] = uv.v1;
-		this.glyphData[offset + 8] = parsed.r;
-		this.glyphData[offset + 9] = parsed.g;
-		this.glyphData[offset + 10] = parsed.b;
-		this.glyphData[offset + 11] = Math.min(1, Math.max(0, alpha));
-		this.glyphCount += 1;
+		target[offset] = x;
+		target[offset + 1] = y;
+		target[offset + 2] = width;
+		target[offset + 3] = height;
+		target[offset + 4] = uv.u0;
+		target[offset + 5] = uv.v0;
+		target[offset + 6] = uv.u1;
+		target[offset + 7] = uv.v1;
+		target[offset + 8] = parsed.r;
+		target[offset + 9] = parsed.g;
+		target[offset + 10] = parsed.b;
+		target[offset + 11] = Math.min(1, Math.max(0, alpha));
+
+		if (this.capturingStaticGlyphs) {
+			this.staticGlyphCount += 1;
+		} else {
+			this.glyphCount += 1;
+		}
+	}
+
+	beginStaticGlyphCapture() {
+		this.staticGlyphCount = 0;
+		this.capturingStaticGlyphs = true;
+	}
+
+	endStaticGlyphCapture() {
+		this.capturingStaticGlyphs = false;
+
+		if (this.staticGlyphCount === 0) return;
+
+		const gl = this.gl;
+		gl.bindBuffer(gl.ARRAY_BUFFER, this.staticGlyphInstanceBuffer);
+		gl.bufferSubData(gl.ARRAY_BUFFER, 0, this.staticGlyphData, 0, this.staticGlyphCount * GLYPH_STRIDE);
+	}
+
+	clearStaticGlyphs() {
+		this.staticGlyphCount = 0;
+		this.capturingStaticGlyphs = false;
+	}
+
+	flushStaticGlyphs() {
+		this.drawGlyphBuffer(this.staticGlyphInstanceBuffer, this.staticGlyphCount, false);
 	}
 
 	flushGlyphs() {
-		if (this.glyphCount === 0) return;
+		if (this.glyphCount > 0) {
+			this.drawGlyphBuffer(this.glyphInstanceBuffer, this.glyphCount, true);
+		}
+	}
+
+	private drawGlyphBuffer(buffer: WebGLBuffer, count: number, upload: boolean) {
+		if (count === 0) return;
 
 		const gl = this.gl;
 		gl.useProgram(this.glyphProgram);
@@ -250,9 +294,13 @@ export class GpuGlyphRenderer {
 		gl.uniform1i(this.glyphUniforms.atlas, 0);
 		gl.uniform2f(this.glyphUniforms.resolution, this.width, this.height);
 		gl.bindVertexArray(this.glyphVao);
-		gl.bindBuffer(gl.ARRAY_BUFFER, this.glyphInstanceBuffer);
-		gl.bufferSubData(gl.ARRAY_BUFFER, 0, this.glyphData, 0, this.glyphCount * GLYPH_STRIDE);
-		gl.drawElementsInstanced(gl.TRIANGLES, 6, gl.UNSIGNED_SHORT, 0, this.glyphCount);
+		this.bindInstanceBuffer(buffer);
+
+		if (upload) {
+			gl.bufferSubData(gl.ARRAY_BUFFER, 0, this.glyphData, 0, count * GLYPH_STRIDE);
+		}
+
+		gl.drawElementsInstanced(gl.TRIANGLES, 6, gl.UNSIGNED_SHORT, 0, count);
 		gl.bindVertexArray(null);
 	}
 
@@ -270,6 +318,7 @@ export class GpuGlyphRenderer {
 		const gl = this.gl;
 		gl.deleteTexture(this.atlasTexture);
 		gl.deleteBuffer(this.glyphInstanceBuffer);
+		gl.deleteBuffer(this.staticGlyphInstanceBuffer);
 		gl.deleteVertexArray(this.glyphVao);
 		gl.deleteProgram(this.glyphProgram);
 		gl.deleteProgram(this.backgroundProgram);
@@ -306,7 +355,20 @@ export class GpuGlyphRenderer {
 		gl.bindBuffer(gl.ARRAY_BUFFER, this.glyphInstanceBuffer);
 		gl.bufferData(gl.ARRAY_BUFFER, this.glyphData.byteLength, gl.DYNAMIC_DRAW);
 
+		gl.bindBuffer(gl.ARRAY_BUFFER, this.staticGlyphInstanceBuffer);
+		gl.bufferData(gl.ARRAY_BUFFER, this.staticGlyphData.byteLength, gl.DYNAMIC_DRAW);
+
+		this.bindInstanceBuffer(this.glyphInstanceBuffer);
+
+		gl.bindVertexArray(null);
+	}
+
+	private bindInstanceBuffer(buffer: WebGLBuffer) {
+		const gl = this.gl;
 		const strideBytes = GLYPH_STRIDE * Float32Array.BYTES_PER_ELEMENT;
+
+		gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
+
 		const attributes = [
 			{ index: 1, size: 2, offset: 0 },
 			{ index: 2, size: 2, offset: 2 },
@@ -326,8 +388,6 @@ export class GpuGlyphRenderer {
 			);
 			gl.vertexAttribDivisor(attribute.index, 1);
 		}
-
-		gl.bindVertexArray(null);
 	}
 
 	private buildGlyphAtlas() {

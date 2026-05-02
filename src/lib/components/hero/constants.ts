@@ -54,10 +54,10 @@ export const CLICK_RIPPLE_GLOBAL_AFTERWAVE = 0;
 export const EMPTY_HOVER_REBOUND_AFTER = 120;
 export const EMPTY_HOVER_MEMORY = 560;
 
-export const TEXT_SAMPLE_MAIN_STEP_X = 5;
-export const TEXT_SAMPLE_MAIN_STEP_Y = 6;
-export const TEXT_SAMPLE_SIGNATURE_STEP_X = 3;
-export const TEXT_SAMPLE_SIGNATURE_STEP_Y = 4;
+export const TEXT_SAMPLE_MAIN_STEP_X = 3;
+export const TEXT_SAMPLE_MAIN_STEP_Y = 4;
+export const TEXT_SAMPLE_SIGNATURE_STEP_X = 2;
+export const TEXT_SAMPLE_SIGNATURE_STEP_Y = 2;
 
 export const MOBILE_TITLE_TOP_Y = 0.29;
 export const MOBILE_TITLE_LINE_GAP_Y = 0.15;
@@ -66,18 +66,18 @@ export const MOBILE_TITLE_FONT_SCALE = 0.24;
 export const MOBILE_NAME_FONT_SCALE = 0.135;
 export const MOBILE_RIGHT_PADDING = 8;
 
-export const MOBILE_TEXT_SAMPLE_MAIN_STEP_X = 4;
-export const MOBILE_TEXT_SAMPLE_MAIN_STEP_Y = 5;
-export const MOBILE_TEXT_SAMPLE_SIGNATURE_STEP_X = 3;
-export const MOBILE_TEXT_SAMPLE_SIGNATURE_STEP_Y = 4;
+export const MOBILE_TEXT_SAMPLE_MAIN_STEP_X = 3;
+export const MOBILE_TEXT_SAMPLE_MAIN_STEP_Y = 4;
+export const MOBILE_TEXT_SAMPLE_SIGNATURE_STEP_X = 2;
+export const MOBILE_TEXT_SAMPLE_SIGNATURE_STEP_Y = 2;
 
 export const VISUAL_EVENT_KINDS: VisualEventKind[] = ['letter-swap', 'color-life'];
-export const VISUAL_EVENT_MIN_GAP = 14500;
-export const VISUAL_EVENT_MAX_GAP = 32000;
+export const VISUAL_EVENT_MIN_GAP = 5200;
+export const VISUAL_EVENT_MAX_GAP = 11800;
 
 export const LETTER_SWAP_DURATION = 4300;
 export const LETTER_SWAP_MIN_TARGETS = 1;
-export const LETTER_SWAP_MAX_TARGETS = 3;
+export const LETTER_SWAP_MAX_TARGETS = 5;
 export const LETTER_SWAP_IN_END = 0.28;
 export const LETTER_SWAP_HOLD_END = 0.68;
 export const LETTER_SWAP_OUT_END = 1;
@@ -86,7 +86,7 @@ export const LETTER_SWAP_REPLACEMENT_GLYPHS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456
 
 export const COLOR_LIFE_DURATION = 6200;
 export const COLOR_LIFE_MIN_ORIGINS = 1;
-export const COLOR_LIFE_MAX_ORIGINS = 4;
+export const COLOR_LIFE_MAX_ORIGINS = 6;
 export const COLOR_LIFE_WAVE_SPEED = 0.021;
 export const COLOR_LIFE_WAVE_WIDTH = 6.8;
 export const COLOR_LIFE_DISTANCE_DECAY = 0.9;
@@ -96,8 +96,8 @@ export const COLOR_LIFE_MAX_STRENGTH = 0.95;
 export const NORMAL_GLYPH_POOL = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ{}[]<>/\\+=:;._-#$%';
 
 export const DENSITY_REBOUND_DURATION = BLOCK_REBOUND_DURATION;
-export const TICKER_BURST_PERIOD = 7200;
-export const TICKER_BURST_DURATION = 1650;
+export const TICKER_BURST_PERIOD = 4600;
+export const TICKER_BURST_DURATION = 1900;
 export const IDLE_BURST_PERIOD = 7600;
 export const IDLE_BURST_DURATION = 1150;
 export const HELIX_START_DELAY = 1640;
