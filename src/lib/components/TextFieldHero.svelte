@@ -130,6 +130,9 @@
 	const SCIENCE_GLYPHS = ['·', '∙', '•', '/', '\\', '-', '|',"@", '#', '$', '%', '&', '*', '+', '=', '?', '!', '~'];
 	const BLOCK_GLYPHS = ['█', '▓', '▒', '░'];
 	const FRAME_MS = 1000 / 42;
+	const MOBILE_FRAME_MS = 1000 / 28;
+	const MOBILE_BREAKPOINT = 640;
+	const TABLET_BREAKPOINT = 1024;
 	const CELL_X = 6;
 	const CELL_Y = 8;
 
@@ -179,6 +182,18 @@
 	const TEXT_SAMPLE_MAIN_STEP_Y = 6;
 	const TEXT_SAMPLE_SIGNATURE_STEP_X = 3;
 	const TEXT_SAMPLE_SIGNATURE_STEP_Y = 4;
+
+	const MOBILE_TITLE_TOP_Y = 0.29;
+	const MOBILE_TITLE_LINE_GAP_Y = 0.15;
+	const MOBILE_NAME_Y = 0.66;
+	const MOBILE_TITLE_FONT_SCALE = 0.24;
+	const MOBILE_NAME_FONT_SCALE = 0.135;
+	const MOBILE_RIGHT_PADDING = 8;
+
+	const MOBILE_TEXT_SAMPLE_MAIN_STEP_X = 4;
+	const MOBILE_TEXT_SAMPLE_MAIN_STEP_Y = 5;
+	const MOBILE_TEXT_SAMPLE_SIGNATURE_STEP_X = 3;
+	const MOBILE_TEXT_SAMPLE_SIGNATURE_STEP_Y = 4;
 
 	const VISUAL_EVENT_KINDS: VisualEventKind[] = ['letter-swap', 'color-life'];
 	const VISUAL_EVENT_MIN_GAP = 14500;
@@ -534,30 +549,145 @@
 		return size;
 	}
 
+	function fittedMonoFontSize(label: string, maxWidth: number, minSize: number, maxSize: number) {
+		if (!ctx || !label.trim()) return minSize;
+
+		let size = maxSize;
+
+		while (size > minSize) {
+			ctx.font = `900 ${size}px "Berkeley Mono", "IBM Plex Mono", "JetBrains Mono", monospace`;
+
+			if (ctx.measureText(label).width <= maxWidth) {
+				return size;
+			}
+
+			size -= 2;
+		}
+
+		return minSize;
+	}
+
+	function titleLinesForWidth(label: string, maxWidth: number, minSize: number, maxSize: number) {
+		const clean = label.trim().toUpperCase();
+		const oneLineSize = fittedMonoFontSize(clean, maxWidth, minSize, maxSize);
+
+		if (oneLineSize > minSize + 4) {
+			return [{ label: clean, size: oneLineSize }];
+		}
+
+		const words = clean.split(/\s+/).filter(Boolean);
+
+		if (words.length <= 1) {
+			return [{ label: clean, size: oneLineSize }];
+		}
+
+		return words.map((word) => ({
+			label: word,
+			size: fittedMonoFontSize(word, maxWidth, minSize, maxSize)
+		}));
+	}
+
 	function makeSamplePoints() {
-		const mainSize = clamp(Math.floor(width * 0.112), 104, 218);
-		const mainPoints = sampleText(
-			text,
-			mainSize,
-			width / 2,
-			height * 0.46,
-			'center',
-			TEXT_SAMPLE_MAIN_STEP_X,
-			TEXT_SAMPLE_MAIN_STEP_Y
-		);
-		const signatureText = "WELCOME BACK " + signature?.trim().toUpperCase();
-		const signaturePoints =
-			signatureText && width >= 1024
+		const cleanSignature = signature?.trim();
+		const isMobile = width < MOBILE_BREAKPOINT;
+		const isTablet = width >= MOBILE_BREAKPOINT && width < TABLET_BREAKPOINT;
+
+		if (isMobile) {
+			const mobileWords = text
+				.trim()
+				.toUpperCase()
+				.split(/\s+/)
+				.filter(Boolean);
+
+			const titleLines = mobileWords.length > 0 ? mobileWords : [text.trim().toUpperCase()];
+			const rightX = width - MOBILE_RIGHT_PADDING;
+			const availableWidth = width - MOBILE_RIGHT_PADDING * 2;
+			const titleStartY = height * MOBILE_TITLE_TOP_Y;
+			const titleGap = height * MOBILE_TITLE_LINE_GAP_Y;
+
+			const mainPoints = titleLines.flatMap((line, index) =>
+				sampleText(
+					line,
+					fittedMonoFontSize(
+						line,
+						availableWidth,
+						56,
+						clamp(Math.floor(width * MOBILE_TITLE_FONT_SCALE), 72, 122)
+					),
+					rightX,
+					titleStartY + index * titleGap,
+					'right',
+					MOBILE_TEXT_SAMPLE_MAIN_STEP_X,
+					MOBILE_TEXT_SAMPLE_MAIN_STEP_Y
+				)
+			);
+
+			const signaturePoints = cleanSignature
 				? sampleText(
-						signatureText,
-						signatureFontSize(signatureText),
-						width - clamp(width * 0.075, 82, 140),
-						height * 0.68,
+						cleanSignature.toUpperCase(),
+						fittedMonoFontSize(
+							cleanSignature.toUpperCase(),
+							availableWidth,
+							28,
+							clamp(Math.floor(width * MOBILE_NAME_FONT_SCALE), 40, 72)
+						),
+						rightX,
+						height * MOBILE_NAME_Y,
 						'right',
-						TEXT_SAMPLE_SIGNATURE_STEP_X,
-						TEXT_SAMPLE_SIGNATURE_STEP_Y
+						MOBILE_TEXT_SAMPLE_SIGNATURE_STEP_X,
+						MOBILE_TEXT_SAMPLE_SIGNATURE_STEP_Y
 					)
 				: [];
+
+			return {
+				main: mainPoints,
+				signature: signaturePoints
+			};
+		}
+
+		const maxTitleWidth = width * (isTablet ? 0.86 : 0.88);
+		const titleMin = isTablet ? 72 : 104;
+		const titleMax = isTablet ? 136 : 218;
+		const titleLines = titleLinesForWidth(text, maxTitleWidth, titleMin, titleMax);
+
+		const lineGap = isTablet ? height * 0.13 : height * 0.12;
+		const titleCenterY = isTablet ? height * 0.43 : height * 0.46;
+		const titleStartY = titleCenterY - ((titleLines.length - 1) * lineGap) / 2;
+
+		const mainPoints = titleLines.flatMap((line, index) =>
+			sampleText(
+				line.label,
+				line.size,
+				width / 2,
+				titleStartY + index * lineGap,
+				'center',
+				TEXT_SAMPLE_MAIN_STEP_X,
+				TEXT_SAMPLE_MAIN_STEP_Y
+			)
+		);
+
+		const signatureLabel = cleanSignature
+			? isTablet
+				? cleanSignature.toUpperCase()
+				: `WELCOME BACK ${cleanSignature.toUpperCase()}`
+			: '';
+
+		const signaturePoints = signatureLabel
+			? sampleText(
+					signatureLabel,
+					fittedMonoFontSize(
+						signatureLabel,
+						width * (isTablet ? 0.72 : 0.45),
+						isTablet ? 36 : 68,
+						isTablet ? 64 : signatureFontSize(signatureLabel)
+					),
+					isTablet ? width / 2 : width - clamp(width * 0.075, 82, 140),
+					isTablet ? height * 0.68 : height * 0.68,
+					isTablet ? 'center' : 'right',
+					TEXT_SAMPLE_SIGNATURE_STEP_X,
+					TEXT_SAMPLE_SIGNATURE_STEP_Y
+				)
+			: [];
 
 		return {
 			main: mainPoints,
@@ -567,12 +697,21 @@
 
 	function buildParticles() {
 		const points = makeSamplePoints();
-		const maxMain = clamp(Math.floor((width * height) / 620), 2400, 6400);
+		const maxMain =
+			width < MOBILE_BREAKPOINT
+				? clamp(Math.floor((width * height) / 420), 1800, 5200)
+				: clamp(Math.floor((width * height) / 620), 1100, 6400);
 		const mainStep = Math.max(1, Math.ceil(points.main.length / maxMain));
 		const main = points.main.filter((_, index) => index % mainStep === 0);
+		const maxSignature =
+			width < MOBILE_BREAKPOINT
+				? clamp(Math.floor((width * height) / 700), 900, 2400)
+				: clamp(Math.floor((width * height) / 900), 700, 2200);
+		const signatureStep = Math.max(1, Math.ceil(points.signature.length / maxSignature));
+		const signature = points.signature.filter((_, index) => index % signatureStep === 0);
 		const combined = [
 			...main.map((point) => ({ point, role: 'main' as const })),
-			...points.signature.map((point) => ({ point, role: 'signature' as const }))
+			...signature.map((point) => ({ point, role: 'signature' as const }))
 		];
 
 		particles = combined.map(({ point, role }, index) => {
@@ -821,7 +960,7 @@
 	function drawRegularGrid(boot: number) {
 		if (!ctx) return;
 
-		ctx.strokeStyle = `rgba(242, 241, 236, ${0.009 + boot * 0.008})`;
+		ctx.strokeStyle = `rgba(242, 241, 236, ${width < MOBILE_BREAKPOINT ? 0.004 + boot * 0.004 : 0.009 + boot * 0.008})`;
 		ctx.lineWidth = 1;
 		ctx.beginPath();
 
@@ -859,7 +998,7 @@
 				const col = Math.floor((x + offset) / CELL_X);
 				const glyphIndex = col * 3 + rowIndex * 17 + glyphShift;
 
-				ctx.globalAlpha = row.alpha * boot * (0.38 + state.amount * 0.28);
+				ctx.globalAlpha = row.alpha * boot * (width < MOBILE_BREAKPOINT ? 0.18 + state.amount * 0.14 : 0.38 + state.amount * 0.28);
 				ctx.fillStyle = Math.abs(col) % row.accentEvery === 0 ? colorSteps[4] : colorSteps[0];
 				ctx.fillText(glyphAt(glyphIndex), x + offset, y);
 			}
@@ -1561,7 +1700,7 @@
 	.terminal-field {
 		position: absolute;
 		inset: 0;
-		display: none;
+		display: block;
 		overflow: hidden;
 		background: #161713;
 	}
@@ -1570,11 +1709,6 @@
 		display: block;
 		width: 100%;
 		height: 100%;
-	}
-
-	@media (min-width: 1024px) {
-		.terminal-field {
-			display: block;
-		}
+		touch-action: manipulation;
 	}
 </style>
