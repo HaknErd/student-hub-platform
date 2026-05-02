@@ -127,6 +127,8 @@ export class GpuGlyphRenderer {
 		resolution: WebGLUniformLocation | null;
 		dpr: WebGLUniformLocation | null;
 		accent: WebGLUniformLocation | null;
+		base: WebGLUniformLocation | null;
+		paper: WebGLUniformLocation | null;
 		cell: WebGLUniformLocation | null;
 		backgroundStrength: WebGLUniformLocation | null;
 		strength: WebGLUniformLocation | null;
@@ -140,6 +142,8 @@ private capturingStaticGlyphs = false;
 	private height = 1;
 	private dpr = 1;
 	private accent: ParsedColor = { r: 1, g: 112 / 255, b: 67 / 255 };
+	private base: ParsedColor = { r: 22 / 255, g: 23 / 255, b: 19 / 255 };
+	private paper: ParsedColor = { r: 242 / 255, g: 241 / 255, b: 236 / 255 };
 	private backgroundStrength = 1;
 	private rendererInfo = {
 		vendor: 'webgl2',
@@ -201,6 +205,8 @@ private capturingStaticGlyphs = false;
 			resolution: gl.getUniformLocation(backgroundProgram, 'uResolution'),
 			dpr: gl.getUniformLocation(backgroundProgram, 'uDpr'),
 			accent: gl.getUniformLocation(backgroundProgram, 'uAccent'),
+			base: gl.getUniformLocation(backgroundProgram, 'uBase'),
+			paper: gl.getUniformLocation(backgroundProgram, 'uPaper'),
 			cell: gl.getUniformLocation(backgroundProgram, 'uCell'),
 			backgroundStrength: gl.getUniformLocation(backgroundProgram, 'uBackgroundStrength'),
 			strength: gl.getUniformLocation(backgroundProgram, 'uStrength')
@@ -211,11 +217,13 @@ private capturingStaticGlyphs = false;
 		this.captureRendererInfo();
 	}
 
-	resize(width: number, height: number, dpr: number, accentColor: string) {
+	resize(width: number, height: number, dpr: number, accentColor: string, baseColor = '#161713', paperColor = '#f2f1ec') {
 		this.width = Math.max(1, width);
 		this.height = Math.max(1, height);
 		this.dpr = Math.max(1, dpr);
 		this.accent = this.colorFor(accentColor);
+		this.base = this.colorFor(baseColor);
+		this.paper = this.colorFor(paperColor);
 	}
 
 	setBackgroundStrength(value: number) {
@@ -459,6 +467,8 @@ private capturingStaticGlyphs = false;
 		gl.uniform2f(this.backgroundUniforms.resolution, this.width, this.height);
 		gl.uniform1f(this.backgroundUniforms.dpr, this.dpr);
 		gl.uniform3f(this.backgroundUniforms.accent, this.accent.r, this.accent.g, this.accent.b);
+		gl.uniform3f(this.backgroundUniforms.base, this.base.r, this.base.g, this.base.b);
+		gl.uniform3f(this.backgroundUniforms.paper, this.paper.r, this.paper.g, this.paper.b);
 		gl.uniform2f(this.backgroundUniforms.cell, CELL_X, CELL_Y);
 		gl.uniform1f(this.backgroundUniforms.backgroundStrength, this.backgroundStrength);
 		gl.uniform1f(this.backgroundUniforms.strength, this.backgroundStrength);
@@ -510,6 +520,8 @@ in vec2 vUv;
 uniform vec2 uResolution;
 uniform float uDpr;
 uniform vec3 uAccent;
+uniform vec3 uBase;
+uniform vec3 uPaper;
 uniform vec2 uCell;
 uniform float uBackgroundStrength;
 uniform float uStrength;
@@ -517,12 +529,10 @@ out vec4 outColor;
 
 void main() {
 	vec2 p = vec2(gl_FragCoord.x / uDpr, uResolution.y - gl_FragCoord.y / uDpr);
-	vec3 base = vec3(22.0, 23.0, 19.0) / 255.0;
-	vec3 paper = vec3(242.0, 241.0, 236.0) / 255.0;
 	float radialDistance = distance(p, vec2(uResolution.x * 0.54, uResolution.y * 0.48));
 	float radial = smoothstep(uResolution.x * 0.62, 0.0, radialDistance);
 	float backgroundStrength = clamp(uBackgroundStrength, 0.0, 1.0);
-	vec3 color = mix(base, uAccent, radial * 0.11 * backgroundStrength);
+	vec3 color = mix(uBase, uAccent, radial * 0.11 * backgroundStrength);
 
 	float gridX = mod(p.x + 0.5, uCell.x);
 	float gridY = mod(p.y + 0.5, uCell.y);
@@ -531,7 +541,7 @@ void main() {
 	float grid = 1.0 - smoothstep(0.35, 0.85, min(lineX, lineY));
 	float gridAlpha = (uResolution.x < 640.0 ? 0.008 : 0.017) * backgroundStrength;
 
-	color = mix(color, paper, grid * gridAlpha * backgroundStrength);
+	color = mix(color, uPaper, grid * gridAlpha * backgroundStrength);
 	outColor = vec4(color, 1.0);
 }
 `;

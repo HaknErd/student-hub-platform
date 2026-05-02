@@ -10,7 +10,7 @@
 
 <header class="flex items-start justify-between gap-4">
 	<div class="space-y-1">
-		<h1 class="text-2xl font-semibold tracking-tight text-text sm:text-3xl">{title}</h1>
+		<h1>{title}</h1>
 		{#if description}
 			<p class="text-sm text-text-muted">{description}</p>
 		{/if}

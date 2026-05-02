@@ -23,7 +23,7 @@
 			{/each}
 		</div>
 		<select
-			class="h-10 w-full rounded-md border border-border bg-bg px-3 text-sm text-text md:hidden"
+			class="field-control w-full md:hidden"
 			onchange={(e) => (location.href = `${basePath}?tab=${(e.currentTarget as HTMLSelectElement).value}`)}
 			value={activeTab}
 			aria-label="Settings section"

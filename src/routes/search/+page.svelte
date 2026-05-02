@@ -1,6 +1,5 @@
 <script lang="ts">
 	import ResourceCard from '$lib/components/resources/ResourceCard.svelte';
-	import Card from '$lib/components/ui/Card.svelte';
 	import EmptyState from '$lib/components/ui/EmptyState.svelte';
 	import PageHeader from '$lib/components/ui/PageHeader.svelte';
 	import PageShell from '$lib/components/ui/PageShell.svelte';
@@ -34,28 +33,28 @@
 			: 'Find students and resources.'}
 	/>
 
-	<Card>
+	<section class="border-b border-border pb-5">
 		<SearchBar id="search-form" action="/search" query={data.query} placeholder="Search users and content...">
 			<select
 				name="type"
 				aria-label="Search type"
-				class="h-10 rounded-md border border-border bg-bg px-3 text-sm text-text focus-visible:border-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/25"
+				class="field-control"
 			>
 				<option value="any" selected={data.type === 'any'}>Any</option>
 				<option value="users" selected={data.type === 'users'}>Users</option>
 				<option value="content" selected={data.type === 'content'}>Content</option>
 			</select>
 		</SearchBar>
-	</Card>
+	</section>
 
 	{#if hasQuery && data.total === 0}
 		<EmptyState message={`No results found for "${data.query}".`} />
 	{/if}
 
 	{#if hasQuery && data.total > 0}
-		<div class="space-y-4">
+		<div class="space-y-7">
 			{#if showUsers}
-				<Card>
+				<section class="pb-6">
 					<SectionHeader title="Users" count={data.usersTotal} />
 
 					{#if data.users.length > 0}
@@ -68,7 +67,7 @@
 						{#if data.totalPages > 1 && (data.type === 'any' || data.type === 'users')}
 							<nav class="mt-3 flex items-center justify-between gap-2" aria-label="User search pagination">
 								<a
-									class="btn-ghost h-9 px-3"
+									class="btn-secondary"
 									class:disabled-link={data.page <= 1}
 									href={data.page <= 1 ? undefined : pageHref(previousPage)}
 								>
@@ -80,7 +79,7 @@
 								</span>
 
 								<a
-									class="btn-ghost h-9 px-3"
+									class="btn-secondary"
 									class:disabled-link={data.page >= data.totalPages}
 									href={data.page >= data.totalPages ? undefined : pageHref(nextPage)}
 								>
@@ -91,11 +90,11 @@
 					{:else}
 						<EmptyState message="No user results." />
 					{/if}
-				</Card>
+				</section>
 			{/if}
 
 			{#if showContent}
-				<Card>
+				<section class="pb-2">
 					<SectionHeader title="Content" count={data.contentTotal} />
 
 					{#if data.content.length > 0}
@@ -108,7 +107,7 @@
 						{#if data.contentTotalPages > 1 && (data.type === 'any' || data.type === 'content')}
 							<nav class="mt-3 flex items-center justify-between gap-2" aria-label="Content search pagination">
 								<a
-									class="btn-ghost h-9 px-3"
+									class="btn-secondary"
 									class:disabled-link={data.page <= 1}
 									href={data.page <= 1 ? undefined : pageHref(previousPage)}
 								>
@@ -120,7 +119,7 @@
 								</span>
 
 								<a
-									class="btn-ghost h-9 px-3"
+									class="btn-secondary"
 									class:disabled-link={data.page >= data.contentTotalPages}
 									href={data.page >= data.contentTotalPages ? undefined : pageHref(contentNextPage)}
 								>
@@ -131,7 +130,7 @@
 					{:else}
 						<EmptyState message="No content results." />
 					{/if}
-				</Card>
+				</section>
 			{/if}
 		</div>
 	{/if}

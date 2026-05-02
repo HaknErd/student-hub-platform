@@ -1,5 +1,6 @@
 <script lang="ts">
 	import type { Snippet } from 'svelte';
+	import SearchBar from '$lib/components/ui/SearchBar.svelte';
 
 	type Props = {
 		formId: string;
@@ -22,18 +23,15 @@
 	}: Props = $props();
 </script>
 
-<form id={formId} class="search-bar-full search-bar-main moderation-search-bar" method="GET" {action}>
-	<input type="search" name="q" {placeholder} value={query} autocomplete="off" />
-
-	<div class="moderation-search-actions">
-		<button type="submit" class="btn">Search</button>
-
+<div class="moderation-search-bar">
+<SearchBar id={formId} {action} query={query} {placeholder}>
+	{#snippet children()}
 		{#if hasActiveFilters && clearHref}
-			<a class="btn-ghost" href={clearHref}>Clear</a>
+			<a class="btn-secondary" href={clearHref}>Clear</a>
 		{/if}
-	</div>
-
+	{/snippet}
+</SearchBar>
 	{#if children}
 		{@render children()}
 	{/if}
-</form>
+</div>

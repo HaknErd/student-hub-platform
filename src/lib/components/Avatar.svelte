@@ -1,5 +1,5 @@
 <script lang="ts">
-	import type { AvatarShape } from '$lib/auth';
+	import type { AvatarShape } from '$lib/types/profile';
 
 	type Props = {
 		userId: string;
@@ -31,6 +31,7 @@
 
 	const initials = $derived(`${firstName?.[0] ?? ''}${lastName?.[0] ?? ''}`.toUpperCase() || '?');
 	const avatarUrl = $derived(!profilePictureUrl ? null : `/api/avatar/${userId}?v=${profilePictureUrl}`);
+	const fallbackAvatarColor = $derived(avatarBackgroundColor || accentColor || 'var(--color-primary)');
 
 	function onImageError() {
 		imageFailed = true;
@@ -66,7 +67,7 @@
 		{:else}
 			<div
 				class="avatar {size} {avatarShape}"
-				style:background-color={avatarBackgroundColor || accentColor || undefined}
+				style:background-color={fallbackAvatarColor}
 				aria-hidden="true"
 			>
 				{initials}
@@ -84,7 +85,7 @@
 {:else}
 	<div
 		class="avatar {size} {avatarShape}"
-		style:background-color={avatarBackgroundColor || accentColor || undefined}
+		style:background-color={fallbackAvatarColor}
 		aria-hidden="true"
 	>
 		{initials}

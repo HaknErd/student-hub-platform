@@ -10,6 +10,12 @@ export const handle: Handle = async ({ event, resolve }) => {
 	const pathname = event.url.pathname;
 	const user = await getUserFromSession(event.cookies);
 	event.locals.user = user;
+	const theme = user?.settings && typeof user.settings === 'object' && 'theme' in user.settings ? user.settings.theme : null;
+	const htmlTheme = theme === 'light' || theme === 'dark' ? theme : 'system';
+	const resolveWithTheme = () =>
+		resolve(event, {
+			transformPageChunk: ({ html }) => html.replace('<html lang="en"', `<html lang="en" data-theme="${htmlTheme}"`)
+		});
 
 	if (pathname.startsWith('/api/') && !ALLOWED_API_PATHS.has(pathname) && !((pathname.startsWith('/api/avatar/') ||
 		pathname.startsWith('/api/banner/')))) {
@@ -24,7 +30,7 @@ export const handle: Handle = async ({ event, resolve }) => {
 		pathname === '/favicon.svg' ||
 		pathname === '/robots.txt'
 	) {
-		return withSecurityHeaders(await resolve(event));
+		return withSecurityHeaders(await resolveWithTheme());
 	}
 
 	if (AUTHENTICATED_PAGES.has(pathname) && !user) {
@@ -32,7 +38,7 @@ export const handle: Handle = async ({ event, resolve }) => {
 	}
 
 	if (ALLOWED_PAGE_PREFIXES.some((prefix) => pathname.startsWith(prefix))) {
-		return withSecurityHeaders(await resolve(event));
+		return withSecurityHeaders(await resolveWithTheme());
 	}
 
 	// Page whitelist (for now).
@@ -40,7 +46,7 @@ export const handle: Handle = async ({ event, resolve }) => {
 		return withSecurityHeaders(Response.redirect(new URL('/', event.url), 303));
 	}
 
-	return withSecurityHeaders(await resolve(event));
+	return withSecurityHeaders(await resolveWithTheme());
 };
 
 function withSecurityHeaders(response: Response) {

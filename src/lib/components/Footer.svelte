@@ -1,7 +1,7 @@
 <script lang="ts">
 	import Email from '$lib/components/Email.svelte';
 	import { CONTACT } from '$lib/config';
-	import type { User } from '$lib/auth';
+	import { canModerateRole, isAdminRole, type User } from '$lib/auth';
 
 	type Props = {
 		user?: User | null;
@@ -21,10 +21,10 @@
 				<a href="/">Home</a>
 				<a href="/feedback">Feedback</a>
 				<a href="/about">About</a>
-				{#if user && ['prefect', 'teacher', 'admin'].includes(user.role)}
+				{#if canModerateRole(user?.role)}
 					<a href="/moderation">Admin</a>
 				{/if}
-				{#if user?.role === 'admin'}
+				{#if isAdminRole(user?.role)}
 					<a href="/admin/server-settings">Server</a>
 				{/if}
 			</nav>

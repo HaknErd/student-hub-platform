@@ -16,10 +16,10 @@
 		name="q"
 		value={query}
 		placeholder={placeholder}
-		class="h-10 w-full rounded-md border border-border bg-bg px-3 text-sm text-text outline-none transition focus-visible:border-primary focus-visible:ring-2 focus-visible:ring-primary/25"
+		class="field-control w-full"
 	/>
 	{#if children}
 		{@render children()}
 	{/if}
-	<button type="submit" class="btn mt-0 shrink-0">Search</button>
+	<button type="submit" class="btn shrink-0">Search</button>
 </form>

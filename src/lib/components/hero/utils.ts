@@ -40,7 +40,31 @@ export function mixRgb(from: RGB, to: RGB, amount: number): RGB {
 }
 
 export function rgbToCss(color: RGB) { return `rgb(${color.r} ${color.g} ${color.b})`; }
-export function buildColorSteps(source: string) { const paper = { r: 242, g: 241, b: 236 }; const accent = hexToRgb(source) ?? { r: 255, g: 112, b: 67 }; return [0, 0.18, 0.34, 0.52, 0.72, 1].map((amount) => rgbToCss(mixRgb(paper, accent, amount))); }
+export function cssColorToRgb(value: string): RGB | null {
+	const hex = hexToRgb(value);
+	if (hex) return hex;
+
+	const rgb = value.trim().match(/rgba?\(([^)]+)\)/i);
+	if (!rgb) return null;
+
+	const parts = rgb[1].split(/[,\s/]+/).filter(Boolean).map(Number);
+	if (parts.length < 3 || parts.slice(0, 3).some((part) => Number.isNaN(part))) return null;
+
+	return {
+		r: Math.round(clamp(parts[0], 0, 255)),
+		g: Math.round(clamp(parts[1], 0, 255)),
+		b: Math.round(clamp(parts[2], 0, 255))
+	};
+}
+export function rgbaCss(source: string, alpha: number) {
+	const color = cssColorToRgb(source) ?? { r: 242, g: 241, b: 236 };
+	return `rgba(${color.r}, ${color.g}, ${color.b}, ${clamp(alpha, 0, 1)})`;
+}
+export function buildColorSteps(source: string, paperSource = '#f2f1ec') {
+	const paper = cssColorToRgb(paperSource) ?? { r: 242, g: 241, b: 236 };
+	const accent = cssColorToRgb(source) ?? { r: 255, g: 112, b: 67 };
+	return [0, 0.18, 0.34, 0.52, 0.72, 1].map((amount) => rgbToCss(mixRgb(paper, accent, amount)));
+}
 export function smoothStep(value: number) { const t = clamp(value, 0, 1); return t * t * (3 - 2 * t); }
 
 export function pointerDensityLevelFromStrength(strength: number) {

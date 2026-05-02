@@ -61,7 +61,7 @@
 			<form method="POST" action="?/rejectResource" class="moderation-reject">
 				<input type="hidden" name="id" value={resource.id} />
 				<input name="reason" placeholder="Reason" />
-				<button class="btn-ghost danger-text" type="submit">Reject</button>
+				<button class="btn-secondary danger-text" type="submit">Reject</button>
 			</form>
 		</div>
 	{/if}

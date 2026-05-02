@@ -26,6 +26,6 @@
 	</div>
 
 	{#if backHref}
-		<a class="btn-ghost" href={backHref}>{backLabel}</a>
+		<a class="btn-secondary" href={backHref}>{backLabel}</a>
 	{/if}
 </header>

@@ -1,6 +1,6 @@
 <script lang="ts">
 	import Avatar from '$lib/components/Avatar.svelte';
-	import type { AvatarShape } from '$lib/auth';
+	import type { AvatarShape } from '$lib/types/profile';
 
 	type Props = {
 		href: string;
@@ -31,7 +31,7 @@
 
 <a
 	{href}
-	class="flex items-center gap-3 rounded-lg border border-border bg-surface px-3 py-2.5 no-underline transition hover:border-primary/40 hover:bg-bg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
+	class="flex items-center gap-3 border-b border-border/70 px-1 py-3 no-underline transition hover:border-primary/30 hover:bg-bg/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
 >
 	<Avatar
 		userId={id}

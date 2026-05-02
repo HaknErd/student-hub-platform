@@ -100,6 +100,7 @@
 		pointerDensityStrengthAt,
 		pseudoRandomGlyph,
 		randomBetween,
+		rgbaCss,
 		scienceGlyphAt,
 		stableParticleGlyph
 	} from './hero/utils';
@@ -216,7 +217,9 @@ let colorLifeNextFlags = new Uint8Array(0);
 	let visualEventTimer: number | null = null;
 let introRandomEventsPrimed = false;
 	let accentColor = '#ff7043';
-	let colorSteps = ['#f2f1ec', '#f2f1ec', '#ff7043', '#ff7043', '#ff7043', '#ff7043'];
+	let backgroundColor = '#ffffff';
+	let textColor = '#0f172a';
+	let colorSteps = ['#0f172a', '#0f172a', '#ff7043', '#ff7043', '#ff7043', '#ff7043'];
 	let frameBudget = FRAME_MS;
 	let configuredTargetFps: number | null = null;
 	let configuredDprCap: number | null = null;
@@ -569,36 +572,24 @@ const PERF_PANEL_WIDTH = 236;
 		rootElement.style.setProperty('--hero-page-blur', `${normalBlur.toFixed(2)}px`);
 
 		const revealTargets = document.querySelectorAll<HTMLElement>(
-			'.site-header, .site-footer, .terminal-actions, .terminal-intro, .hero-reveal-target, [data-hero-reveal]'
+			'.hero-reveal-target, [data-hero-reveal]'
 		);
 
 		for (const target of revealTargets) {
-			const noBlur = target.classList.contains('terminal-actions') || target.classList.contains('site-header');
-
 			target.style.opacity = amount.toFixed(4);
-			target.style.filter = amount >= 0.999 || noBlur ? 'none' : `blur(${normalBlur.toFixed(2)}px)`;
+			target.style.filter = amount >= 0.999 ? 'none' : `blur(${normalBlur.toFixed(2)}px)`;
 			target.style.transform = 'translate3d(0, 0, 0)';
 			target.style.pointerEvents = amount >= 0.98 ? '' : 'none';
 			target.style.animation = 'none';
 			target.style.transition = 'none';
-			target.style.overflow = target.classList.contains('terminal-actions') ? 'visible' : '';
 			target.style.willChange = amount >= 0.999 ? 'auto' : 'opacity, filter';
-		}
-
-		const actionChildren = document.querySelectorAll<HTMLElement>('.terminal-actions > *');
-		for (const child of actionChildren) {
-			child.style.opacity = '1';
-			child.style.filter = 'none';
-			child.style.transform = 'translate3d(0, 0, 0)';
-			child.style.animation = 'none';
-			child.style.transition = 'none';
-			child.style.willChange = 'auto';
 		}
 
 		rootElement.classList.toggle('hero-intro-ready', introReady);
 		rootElement.classList.toggle('hero-intro-typing', introReady && !intro.typeDone);
 		rootElement.classList.toggle('hero-intro-revealing', introReady && intro.typeDone && !intro.done);
 		rootElement.classList.toggle('hero-intro-done', intro.done);
+		rootElement.classList.toggle('home-intro-hide-nav', !intro.done);
 
 		if (intro.done && visualEventTimer === null && !reduceMotion && visible && document.visibilityState !== 'hidden') {
 			scheduleNextVisualEvent();
@@ -617,12 +608,12 @@ const PERF_PANEL_WIDTH = 236;
 		if (typeof document === 'undefined') return;
 
 		const rootElement = document.documentElement;
-		rootElement.classList.remove('hero-intro-active', 'hero-intro-ready', 'hero-intro-typing', 'hero-intro-revealing', 'hero-intro-done');
+		rootElement.classList.remove('hero-intro-active', 'hero-intro-ready', 'hero-intro-typing', 'hero-intro-revealing', 'hero-intro-done', 'home-intro-hide-nav');
 		rootElement.style.removeProperty('--hero-page-reveal');
 		rootElement.style.removeProperty('--hero-page-blur');
 
 		const targets = document.querySelectorAll<HTMLElement>(
-			'.site-header, .site-footer, .terminal-actions, .terminal-actions > *, .terminal-intro, .hero-reveal-target, [data-hero-reveal]'
+			'.hero-reveal-target, [data-hero-reveal]'
 		);
 
 		for (const target of targets) {
@@ -1002,21 +993,21 @@ function introTextOpacity(_now: number) {
 
 		const { layer, layerCtx } = target;
 
-		// Qwen + Claude Sonnet: cache the background, radial glow, and regular grid outside the frame loop.
-		layerCtx.fillStyle = '#161713';
+		// Cache the background, radial glow, and regular grid outside the frame loop.
+		layerCtx.fillStyle = backgroundColor;
 		layerCtx.fillRect(0, 0, width, height);
 
 		const radial = layerCtx.createRadialGradient(width * 0.54, height * 0.48, 0, width * 0.54, height * 0.48, width * 0.62);
 		radial.addColorStop(0, accentColor);
-		radial.addColorStop(0.44, 'rgba(240, 240, 232, 0.08)');
-		radial.addColorStop(1, 'rgba(22, 23, 19, 0)');
+		radial.addColorStop(0.44, rgbaCss(textColor, 0.08));
+		radial.addColorStop(1, rgbaCss(backgroundColor, 0));
 
 		layerCtx.globalAlpha = 0.11;
 		layerCtx.fillStyle = radial;
 		layerCtx.fillRect(0, 0, width, height);
 		layerCtx.globalAlpha = 1;
 
-		layerCtx.strokeStyle = `rgba(242, 241, 236, ${width < MOBILE_BREAKPOINT ? 0.008 : 0.017})`;
+		layerCtx.strokeStyle = rgbaCss(textColor, width < MOBILE_BREAKPOINT ? 0.008 : 0.017);
 		layerCtx.lineWidth = 1;
 		layerCtx.beginPath();
 
@@ -1042,9 +1033,9 @@ function introTextOpacity(_now: number) {
 
 		// Qwen: bake resting particles so idle frames do not loop through every glyph.
 		for (const particle of particles) {
-			const roleBoost = particle.role === 'signature' ? 2.65 : 1;
+			const roleBoost = particle.role === 'signature' ? 1.55 : 1;
 			const alpha = Math.min(1, particle.alpha * roleBoost);
-			drawGlyph(layerCtx, particle.role === 'signature' ? particle.literalGlyph : particle.baseGlyph, particle.homeX, particle.homeY, colorSteps[particle.baseFillIndex] ?? colorSteps[0], particle.baseFontSize, alpha);
+			drawGlyph(layerCtx, particle.baseGlyph, particle.homeX, particle.homeY, colorSteps[particle.baseFillIndex] ?? colorSteps[0], particle.baseFontSize, alpha);
 		}
 
 		layerCtx.globalAlpha = 1;
@@ -1592,6 +1583,112 @@ for (let rowIndex = 0; rowIndex < tickerRows.length; rowIndex++) {
 		return points;
 	}
 
+
+	function sampleTrackedText(
+		label: string,
+		fontSize: number,
+		x: number,
+		y: number,
+		align: CanvasTextAlign,
+		stepX: number,
+		stepY: number,
+		tracking: number,
+		fontWeight = 650
+	) {
+		const cacheKey = `${width}|${height}|tracked|${label}|${fontWeight}|${fontSize}|${x}|${y}|${align}|${stepX}|${stepY}|${tracking}`;
+		const cached = sampleTextCache.get(cacheKey);
+		if (cached) return cached;
+
+		const sample = document.createElement('canvas');
+		const sampleCtx = sample.getContext('2d', { willReadFrequently: true });
+		if (!sampleCtx) return [] as SamplePoint[];
+
+		sample.width = Math.max(1, Math.floor(width));
+		sample.height = Math.max(1, Math.floor(height));
+		sampleCtx.fillStyle = '#fff';
+		sampleCtx.textAlign = 'left';
+		sampleCtx.textBaseline = 'middle';
+		sampleCtx.font = `${fontWeight} ${fontSize}px "Berkeley Mono", "IBM Plex Mono", "JetBrains Mono", monospace`;
+
+		const glyphs = [...label];
+		const widths = glyphs.map((glyph) => sampleCtx.measureText(glyph).width || fontSize * 0.56);
+		const totalWidth = widths.reduce((sum, value) => sum + value, 0) + Math.max(0, glyphs.length - 1) * tracking;
+		const textLeft = align === 'center' ? x - totalWidth / 2 : align === 'right' ? x - totalWidth : x;
+
+		const spans: { start: number; end: number; glyph: string; charIndex: number }[] = [];
+		const realGlyphs = label.replace(/\s+/g, '') || label;
+		let cursor = textLeft;
+		let visibleCharIndex = 0;
+
+		for (let index = 0; index < glyphs.length; index++) {
+			const glyph = glyphs[index];
+			const glyphWidth = widths[index];
+			const hasGlyph = Boolean(glyph.trim());
+
+			spans.push({
+				start: cursor,
+				end: cursor + glyphWidth,
+				glyph: hasGlyph ? glyph : '',
+				charIndex: hasGlyph ? visibleCharIndex : -1
+			});
+
+			if (glyph) {
+				sampleCtx.fillText(glyph, cursor, y);
+			}
+
+			if (hasGlyph) visibleCharIndex += 1;
+			cursor += glyphWidth + (index < glyphs.length - 1 ? tracking : 0);
+		}
+
+		const glyphMetaFor = (px: number, py: number) => {
+			for (const span of spans) {
+				if (px >= span.start && px <= span.end && span.glyph) {
+					return {
+						glyph: span.glyph,
+						charIndex: span.charIndex
+					};
+				}
+			}
+
+			const fallbackIndex = Math.abs(Math.floor(px + py)) % Math.max(1, realGlyphs.length);
+			return {
+				glyph: realGlyphs[fallbackIndex] ?? label[0] ?? '',
+				charIndex: fallbackIndex
+			};
+		};
+
+		const image = sampleCtx.getImageData(0, 0, sample.width, sample.height).data;
+		const points: SamplePoint[] = [];
+		const usedGridCells = new Set<string>();
+		const startX = Math.floor(stepX / 2);
+		const startY = Math.floor(stepY / 2);
+
+		for (let py = startY; py < sample.height; py += stepY) {
+			for (let px = startX; px < sample.width; px += stepX) {
+				if (image[(py * sample.width + px) * 4 + 3] > 10) {
+					const gx = snapX(px);
+					const gy = snapY(py);
+					const cellKey = `${Math.round(gx / CELL_X)}:${Math.round(gy / CELL_Y)}`;
+
+					if (usedGridCells.has(cellKey)) continue;
+					usedGridCells.add(cellKey);
+
+					const meta = glyphMetaFor(px, py);
+					points.push({
+						x: gx,
+						y: gy,
+						glyph: meta.glyph,
+						charIndex: meta.charIndex
+					});
+				}
+			}
+		}
+
+		sampleTextCache.set(cacheKey, points);
+		return points;
+	}
+
+
 	function signatureFontSize(label: string) {
 		const measure = getMeasureContext();
 		if (!measure) return 88;
@@ -1683,19 +1780,23 @@ for (let rowIndex = 0; rowIndex < tickerRows.length; rowIndex++) {
 			);
 
 			const signaturePoints = cleanSignature
-				? sampleText(
+				? sampleTrackedText(
 						cleanSignature.toUpperCase(),
-						fittedMonoFontSize(
-							cleanSignature.toUpperCase(),
-							availableWidth,
-							28,
-							clamp(Math.floor(width * MOBILE_NAME_FONT_SCALE), 40, 72)
+						Math.floor(
+							fittedMonoFontSize(
+								cleanSignature.toUpperCase(),
+								availableWidth,
+								30,
+								clamp(Math.floor(width * MOBILE_NAME_FONT_SCALE), 40, 68)
+							) * 1.08
 						),
 						rightX,
 						height * MOBILE_NAME_Y,
 						'right',
-						MOBILE_TEXT_SAMPLE_SIGNATURE_STEP_X,
-						MOBILE_TEXT_SAMPLE_SIGNATURE_STEP_Y
+						1,
+						1,
+						5.0,
+						600
 					)
 				: [];
 
@@ -1734,37 +1835,45 @@ for (let rowIndex = 0; rowIndex < tickerRows.length; rowIndex++) {
 		const signatureBottomY = isTablet ? height * 0.735 : height * 0.72;
 
 		const signatureTopPoints = cleanSignature
-			? sampleText(
+			? sampleTrackedText(
 					signatureTopLabel,
-					fittedMonoFontSize(
-						signatureTopLabel,
-						width * (isTablet ? 0.70 : 0.50),
-						isTablet ? 34 : 46,
-						isTablet ? 54 : 72
+					Math.floor(
+						fittedMonoFontSize(
+							signatureTopLabel,
+							width * (isTablet ? 0.62 : 0.40),
+							isTablet ? 24 : 34,
+							isTablet ? 38 : 48
+						) * 1.08
 					),
 					signatureX,
 					signatureTopY,
 					signatureAlign,
-					TEXT_SAMPLE_SIGNATURE_STEP_X,
-					TEXT_SAMPLE_SIGNATURE_STEP_Y
+					1,
+					1,
+					isTablet ? 5.5 : 6.6,
+					600
 				)
 			: [];
 
 		const signatureBottomPoints = cleanSignature
 			? offsetSampleIndexes(
-					sampleText(
+					sampleTrackedText(
 						signatureBottomLabel,
-						fittedMonoFontSize(
-							signatureBottomLabel,
-							width * (isTablet ? 0.86 : 0.58),
-							isTablet ? 38 : 52,
-							isTablet ? 66 : 88
+						Math.floor(
+							fittedMonoFontSize(
+								signatureBottomLabel,
+								width * (isTablet ? 0.80 : 0.50),
+								isTablet ? 30 : 40,
+								isTablet ? 50 : 62
+							) * 1.1
 						),
 						signatureX,
 						signatureBottomY,
 						signatureAlign,
-						TEXT_SAMPLE_SIGNATURE_STEP_X,
-						TEXT_SAMPLE_SIGNATURE_STEP_Y
+						1,
+						1,
+						isTablet ? 6.0 : 7.2,
+						600
 					),
 					visibleGlyphCount(signatureTopLabel) + 1
 				)
@@ -1791,8 +1900,8 @@ for (let rowIndex = 0; rowIndex < tickerRows.length; rowIndex++) {
 		const main = points.main.filter((_, index) => index % mainStep === 0);
 		const maxSignatureBase =
 			width < MOBILE_BREAKPOINT
-				? clamp(Math.floor((width * height) / 105), 5200, 14000)
-				: clamp(Math.floor((width * height) / 115), 9800, 26000);
+				? clamp(Math.floor((width * height) / 82), 12000, 26000)
+				: clamp(Math.floor((width * height) / 90), 18000, 42000);
 		const maxSignature = Math.floor(maxSignatureBase * qualityScale);
 		const signatureStep = Math.max(1, Math.ceil(points.signature.length / maxSignature));
 		const signature = points.signature.filter((_, index) => index % signatureStep === 0);
@@ -1815,7 +1924,7 @@ for (let rowIndex = 0; rowIndex < tickerRows.length; rowIndex++) {
 				startY: homeY,
 				phase: (index % 97) * 0.19,
 				delay: 0,
-				alpha: role === 'signature' ? 1.02 + (index % 4) * 0.02 : 0.82 + (index % 5) * 0.03,
+				alpha: role === 'signature' ? 0.92 + (index % 4) * 0.015 : 0.82 + (index % 5) * 0.03,
 				glyph: glyphAt(index * 11),
 				literalGlyph: point.glyph,
 				charIndex: point.charIndex,
@@ -1826,7 +1935,7 @@ for (let rowIndex = 0; rowIndex < tickerRows.length; rowIndex++) {
 				hideGate: ((index * 29) % 100) / 100,
 				baseGlyph: stableParticleGlyph(index + (role === 'signature' ? 100000 : 0), point.charIndex, homeX, homeY),
 				baseFillIndex: accent ? 3 : 0,
-				baseFontSize: role === 'signature' ? 7.1 : 5.1,
+				baseFontSize: role === 'signature' ? 4.7 : 5.1,
 				role
 			};
 		});
@@ -2205,9 +2314,9 @@ for (let rowIndex = 0; rowIndex < tickerRows.length; rowIndex++) {
 
 		panel.fillStyle = 'rgba(242, 241, 236, 0.92)';
 		panel.font = '10px "Berkeley Mono", "IBM Plex Mono", "JetBrains Mono", monospace';
-		panel.fillText(`frame ${avg.toFixed(1)} avg  ${median.toFixed(1)} med`, 10, 16);
-		panel.fillText(`${max.toFixed(1)} max  ${fps.toFixed(0)} fps  ${capLabel}  ${dprLabel}`, 10, 30);
-		panel.fillText(`${rendererLabel}  raf skip ${skipRate.toFixed(0)}%`, 10, 44);
+		panel.fillText(`frame ${avg.toFixed(1)} avg ${median.toFixed(1)} med`, 10, 16);
+		panel.fillText(`${max.toFixed(1)} max ${fps.toFixed(0)} fps ${capLabel} ${dprLabel}`, 10, 30);
+		panel.fillText(`${rendererLabel} raf skip ${skipRate.toFixed(0)}%`, 10, 44);
 
 		panel.strokeStyle = 'rgba(242, 241, 236, 0.16)';
 		panel.beginPath();
@@ -2288,7 +2397,7 @@ for (let rowIndex = 0; rowIndex < tickerRows.length; rowIndex++) {
 		}
 
 		if (gpuRenderer) {
-			gpuRenderer.resize(width, height, dpr, accentColor);
+			gpuRenderer.resize(width, height, dpr, accentColor, backgroundColor, textColor);
 			ctx = null;
 		} else {
 			glyphAtlas.reset(dpr);
@@ -2302,9 +2411,12 @@ for (let rowIndex = 0; rowIndex < tickerRows.length; rowIndex++) {
 			ctx.font = '7px "Berkeley Mono", "IBM Plex Mono", "JetBrains Mono", monospace';
 		}
 
-		accentColor = getComputedStyle(document.documentElement).getPropertyValue('--color-accent').trim() || accentColor;
-		colorSteps = buildColorSteps(accentColor);
-		gpuRenderer?.resize(width, height, dpr, accentColor);
+		const rootStyles = getComputedStyle(document.documentElement);
+		accentColor = rootStyles.getPropertyValue('--color-accent').trim() || accentColor;
+		backgroundColor = rootStyles.getPropertyValue('--color-bg').trim() || backgroundColor;
+		textColor = rootStyles.getPropertyValue('--color-text').trim() || textColor;
+		colorSteps = buildColorSteps(accentColor, textColor);
+		gpuRenderer?.resize(width, height, dpr, accentColor, backgroundColor, textColor);
 
 		if (!gpuRenderer) {
 			buildStaticBackgroundLayer();
@@ -2347,7 +2459,7 @@ for (let rowIndex = 0; rowIndex < tickerRows.length; rowIndex++) {
 	function drawRegularGrid(boot: number) {
 		if (!ctx) return;
 
-		ctx.strokeStyle = `rgba(242, 241, 236, ${width < MOBILE_BREAKPOINT ? 0.004 + boot * 0.004 : 0.009 + boot * 0.008})`;
+		ctx.strokeStyle = rgbaCss(textColor, width < MOBILE_BREAKPOINT ? 0.004 + boot * 0.004 : 0.009 + boot * 0.008);
 		ctx.lineWidth = 1;
 		ctx.beginPath();
 
@@ -2521,7 +2633,7 @@ for (let rowIndex = 0; rowIndex < tickerRows.length; rowIndex++) {
 		let sectionStartedAt = profileStart();
 		if (!gpuRenderer && ctx) {
 			ctx.globalAlpha = 1;
-			ctx.fillStyle = '#050504';
+			ctx.fillStyle = backgroundColor;
 			ctx.fillRect(0, 0, width, height);
 
 			if (bgAmount > 0.001) {
@@ -2530,7 +2642,7 @@ for (let rowIndex = 0; rowIndex < tickerRows.length; rowIndex++) {
 				if (staticBackgroundLayer) {
 					ctx.drawImage(staticBackgroundLayer, 0, 0, width, height);
 				} else {
-					ctx.fillStyle = '#161713';
+					ctx.fillStyle = backgroundColor;
 					ctx.fillRect(0, 0, width, height);
 					drawRegularGrid(boot);
 				}
@@ -2743,7 +2855,7 @@ for (let rowIndex = 0; rowIndex < tickerRows.length; rowIndex++) {
 			const colorLifeAmount = colorLifeInfluence[i] ?? 0;
 			const clickRippleAmount = rippleInfluence[i] ?? 0;
 
-			const roleBoost = particle.role === 'signature' ? 2.65 : 1;
+			const roleBoost = particle.role === 'signature' ? 1.45 : 1;
 			const alpha = Math.min(
 				1,
 				particle.alpha *
@@ -2772,12 +2884,9 @@ for (let rowIndex = 0; rowIndex < tickerRows.length; rowIndex++) {
 			const fill = baseFill;
 			const fontSize = particle.baseFontSize;
 
-			const normalGlyph =
-				particle.role === 'signature'
-					? particle.literalGlyph
-					: letterSwapActive
-						? glyphForLetterSwap(particle, i, rollSeed, letterSwapProgressValue)
-						: particle.baseGlyph;
+			const normalGlyph = letterSwapActive
+				? glyphForLetterSwap(particle, i, rollSeed, letterSwapProgressValue)
+				: particle.baseGlyph;
 
 			if (clickHidden) continue;
 
@@ -2843,12 +2952,6 @@ for (let rowIndex = 0; rowIndex < tickerRows.length; rowIndex++) {
 					: normalGlyph;
 
 			const drawAlpha = isBlocked ? 0.9 : rippleBlocifying ? Math.min(0.94, alpha + rippleBlockAmount * CLICK_RIPPLE_BLOCK_ALPHA) : alpha;
-
-			if (particle.role === 'signature' && !isBlocked && !rippleBlocifying) {
-				drawGlyph(ctx, particle.literalGlyph, x, y, fill, fontSize + 0.85, Math.min(1, alpha));
-				drawGlyph(ctx, particle.literalGlyph, snapX(x + CELL_X * 0.28), y, fill, fontSize + 0.25, Math.min(0.68, alpha * 0.55));
-				continue;
-			}
 
 			drawGlyph(ctx, glyph, x, y, fill, fontSize, drawAlpha);
 		}
@@ -3255,7 +3358,7 @@ for (let rowIndex = 0; rowIndex < tickerRows.length; rowIndex++) {
 		inset: 0;
 		display: block;
 		overflow: hidden;
-		background: #161713;
+		background: var(--color-bg);
 	}
 
 	canvas {
@@ -3280,17 +3383,6 @@ for (let rowIndex = 0; rowIndex < tickerRows.length; rowIndex++) {
 		display: block;
 	}
 
-	:global(.hero-reveal-target),
-	:global([data-hero-reveal]) {
-		opacity: 0;
-		filter: blur(18px);
-		transform: translate3d(0, 18px, 0);
-		pointer-events: none;
-		animation: none !important;
-		transition: none !important;
-		will-change: opacity, filter, transform;
-	}
-
 	.terminal-field {
 		z-index: 0;
 		isolation: isolate;
@@ -3313,15 +3405,7 @@ for (let rowIndex = 0; rowIndex < tickerRows.length; rowIndex++) {
 	}
 
 
-	/* Final hero intro reveal:
-	   - header/buttons/footer are dark from first paint
-	   - reveal is uniform, not bottom-to-top
-	   - brightness is clamped to final brightness, never above 1
-	   - canvas/helix are not filter-brightened */
-	:global(.site-header),
-	:global(.site-footer),
-	:global(.terminal-actions),
-	:global(.terminal-intro),
+	/* Page-owned reveal targets only. Global layout must not be controlled here. */
 	:global(.hero-reveal-target),
 	:global([data-hero-reveal]) {
 		opacity: 0;
@@ -3333,10 +3417,6 @@ for (let rowIndex = 0; rowIndex < tickerRows.length; rowIndex++) {
 		will-change: opacity, filter;
 	}
 
-	:global(html.hero-intro-done .site-header),
-	:global(html.hero-intro-done .site-footer),
-	:global(html.hero-intro-done .terminal-actions),
-	:global(html.hero-intro-done .terminal-intro),
 	:global(html.hero-intro-done .hero-reveal-target),
 	:global(html.hero-intro-done [data-hero-reveal]) {
 		opacity: 1;
@@ -3347,37 +3427,6 @@ for (let rowIndex = 0; rowIndex < tickerRows.length; rowIndex++) {
 
 
 	
-	/* Intro reveal: opacity + blur only. No brightness, no fly-in, no pop. */
-	:global(html.hero-intro-active .site-header),
-	:global(html.hero-intro-active .site-footer),
-	:global(html.hero-intro-active .terminal-actions),
-	:global(html.hero-intro-active .terminal-intro),
-	:global(html.hero-intro-active .hero-reveal-target),
-	:global(html.hero-intro-active [data-hero-reveal]) {
-		opacity: var(--hero-page-reveal, 0) !important;
-		filter: blur(var(--hero-page-blur, 8px)) !important;
-		transform: none !important;
-		pointer-events: none !important;
-		animation: none !important;
-		transition: none !important;
-	}
-
-	:global(html.hero-intro-active.hero-intro-done .site-header),
-	:global(html.hero-intro-active.hero-intro-done .site-footer),
-	:global(html.hero-intro-active.hero-intro-done .terminal-actions),
-	:global(html.hero-intro-active.hero-intro-done .terminal-intro),
-	:global(html.hero-intro-active.hero-intro-done .hero-reveal-target),
-	:global(html.hero-intro-active.hero-intro-done [data-hero-reveal]) {
-		opacity: 1 !important;
-		filter: none !important;
-		pointer-events: auto !important;
-	}
-
-	/* Final intro override: no brightness, no child fly-in, no button blur cutoff. */
-	:global(html.hero-intro-active .site-header),
-	:global(html.hero-intro-active .site-footer),
-	:global(html.hero-intro-active .terminal-actions),
-	:global(html.hero-intro-active .terminal-intro),
 	:global(html.hero-intro-active .hero-reveal-target),
 	:global(html.hero-intro-active [data-hero-reveal]) {
 		opacity: var(--hero-page-reveal, 0) !important;
@@ -3388,24 +3437,6 @@ for (let rowIndex = 0; rowIndex < tickerRows.length; rowIndex++) {
 		transition: none !important;
 	}
 
-	:global(html.hero-intro-active .site-header),
-	:global(html.hero-intro-active .terminal-actions) {
-		filter: none !important;
-		overflow: visible !important;
-	}
-
-	:global(html.hero-intro-active .terminal-actions > *) {
-		opacity: 1 !important;
-		filter: none !important;
-		transform: translate3d(0, 0, 0) !important;
-		animation: none !important;
-		transition: none !important;
-	}
-
-	:global(html.hero-intro-done .site-header),
-	:global(html.hero-intro-done .site-footer),
-	:global(html.hero-intro-done .terminal-actions),
-	:global(html.hero-intro-done .terminal-intro),
 	:global(html.hero-intro-done .hero-reveal-target),
 	:global(html.hero-intro-done [data-hero-reveal]) {
 		opacity: 1 !important;

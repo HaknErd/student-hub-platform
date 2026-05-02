@@ -1,7 +1,8 @@
 <script lang="ts">
 	import { fly } from 'svelte/transition';
+	import { BANNER_ASPECT_RATIO, BANNER_OUTPUT_HEIGHT, BANNER_OUTPUT_WIDTH } from '$lib/constants/media';
+	import type { AvatarShape } from '$lib/types/profile';
 
-	export type AvatarShape = 'rounded-xl' | 'rounded-full';
 	export type EditorKind = 'avatar' | 'banner';
 
 	type Props = {
@@ -23,9 +24,9 @@
 		title,
 		currentShape = 'rounded-xl',
 		currentImageUrl = null,
-		aspectRatio = kind === 'banner' ? 3 : 1,
-		outputWidth = kind === 'banner' ? 1500 : 512,
-		outputHeight = kind === 'banner' ? 500 : 512,
+		aspectRatio = kind === 'banner' ? BANNER_ASPECT_RATIO : 1,
+		outputWidth = kind === 'banner' ? BANNER_OUTPUT_WIDTH : 512,
+		outputHeight = kind === 'banner' ? BANNER_OUTPUT_HEIGHT : 512,
 		allowShape = kind === 'avatar',
 		onclose,
 		onremove,
@@ -233,7 +234,8 @@
 		ctx.drawImage(imageElement, sx, sy, sw, sh, 0, 0, outputWidth, outputHeight);
 
 		return new Promise((resolve) => {
-			out.toBlob((blob) => resolve(blob), 'image/webp', 0.88);
+			const quality = kind === 'banner' ? 0.8 : 0.88;
+			out.toBlob((blob) => resolve(blob), 'image/webp', quality);
 		});
 	}
 
@@ -312,7 +314,11 @@
 		<header class="image-editor-header">
 			<h3>{title ?? (kind === 'banner' ? 'Banner image' : 'Profile picture')}</h3>
 			<button type="button" class="image-editor-close" onclick={handleCancel} aria-label="Close">
+				{#if saving}
+					…
+				{:else}
 				&times;
+				{/if}
 			</button>
 		</header>
 
@@ -342,7 +348,7 @@
 					<canvas bind:this={canvas} width={CROP_WIDTH} height={CROP_HEIGHT}></canvas>
 				</div>
 			{:else}
-				<button type="button" class="image-editor-upload-empty" onclick={() => fileInput?.click()}>
+				<button type="button" class="image-editor-upload-empty" onclick={() => fileInput?.click()} disabled={saving}>
 					<span>{kind === 'banner' ? 'Upload a banner image' : 'Upload a profile picture'}</span>
 					<small>PNG, JPEG, or WebP. Drag and drop works too.</small>
 				</button>
@@ -410,19 +416,19 @@
 
 		<footer class="image-editor-footer">
 			<div class="image-editor-footer-left">
-				<button type="button" class="btn-ghost" onclick={() => fileInput?.click()}>
+				<button type="button" class="btn-secondary" onclick={() => fileInput?.click()} disabled={saving}>
 					{imageLoaded ? 'Choose another image' : 'Choose image'}
 				</button>
 
 				{#if currentImageUrl && onremove}
-					<button type="button" class="btn-ghost danger-text" onclick={handleRemove}>
+					<button type="button" class="btn-secondary danger-text" onclick={handleRemove} disabled={saving}>
 						Remove
 					</button>
 				{/if}
 			</div>
 
 			<div class="image-editor-footer-right">
-				<button type="button" class="btn-ghost" onclick={handleCancel}>Cancel</button>
+				<button type="button" class="btn-secondary" onclick={handleCancel} disabled={saving}>Cancel</button>
 
 				<button type="button" class="btn" onclick={handleSave} disabled={!imageLoaded || saving}>
 					{saving ? 'Saving...' : 'Save image'}

@@ -1,5 +1,5 @@
 <script lang="ts">
-	import type { User } from '$lib/auth';
+	import { canModerateRole, isAdminRole, type User } from '$lib/auth';
 	import Avatar from '$lib/components/Avatar.svelte';
 
 	type Props = {
@@ -45,10 +45,10 @@
 		<div class="absolute right-0 top-[calc(100%+0.75rem)] z-20 w-52 rounded-lg border border-border bg-surface p-1 shadow-xl">
 			<a class="block rounded-md px-3 py-2 text-sm text-text no-underline hover:bg-bg" href={`/profile/${user.id}`}>Profile</a>
 			<a class="block rounded-md px-3 py-2 text-sm text-text no-underline hover:bg-bg" href="/account">Account</a>
-			{#if ['prefect', 'teacher', 'admin'].includes(user.role)}
+			{#if canModerateRole(user.role)}
 				<a class="block rounded-md px-3 py-2 text-sm text-text no-underline hover:bg-bg" href="/moderation">Moderation</a>
 			{/if}
-			{#if user.role === 'admin'}
+			{#if isAdminRole(user.role)}
 				<a class="block rounded-md px-3 py-2 text-sm text-text no-underline hover:bg-bg" href="/admin/server-settings">Server</a>
 			{/if}
 			<button type="button" class="mt-1 block w-full rounded-md px-3 py-2 text-left text-sm text-text-muted hover:bg-bg hover:text-text" onclick={onLogout}>Logout</button>

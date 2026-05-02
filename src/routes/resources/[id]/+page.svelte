@@ -1,4 +1,13 @@
 <script lang="ts">
+	import {
+		RESOURCE_COURSE_OPTIONS,
+		RESOURCE_FORMAT_OPTIONS_WITH_AUTO,
+		RESOURCE_LEVEL_OPTIONS,
+		RESOURCE_SUBJECTS,
+		RESOURCE_TYPE_OPTIONS,
+		RESOURCE_YEAR_GROUPS
+	} from '$lib/constants/resources';
+
 	let { data, form } = $props();
 
 	const resource = $derived(data.resource);
@@ -6,70 +15,6 @@
 	let editing = $state(false);
 	let showPermanentDelete = $state(false);
 	let permanentDeleteConfirm = $state('');
-
-	const subjects = [
-		'Maths',
-		'Math AA',
-		'Math AI',
-		'Sciences',
-		'Biology',
-		'Chemistry',
-		'Physics',
-		'English',
-		'Geography',
-		'History',
-		'Foreign Languages',
-		'Business/Economics',
-		'Psychology',
-		'Computer Science',
-		'Art',
-		'Other'
-	];
-
-	const courses = [
-		['', 'Any'],
-		['IGCSE', 'IGCSE'],
-		['IB', 'IB'],
-		['OTHER', 'Other']
-	];
-
-	const levels = [
-		['', 'None'],
-		['HL', 'HL'],
-		['SL', 'SL'],
-		['OTHER', 'Other']
-	];
-
-	const types = [
-		['study_guide', 'Study guide'],
-		['notes', 'Notes'],
-		['past_paper_link', 'Past paper link'],
-		['mark_scheme_link', 'Mark scheme link'],
-		['worksheet', 'Worksheet'],
-		['textbook', 'Textbook'],
-		['syllabus', 'Syllabus'],
-		['external_link', 'External link'],
-		['video', 'Video'],
-		['other', 'Other']
-	];
-
-	const formats = [
-		['', 'Auto/unknown'],
-		['pdf', 'PDF'],
-		['docx', 'DOCX'],
-		['odt', 'ODT'],
-		['txt', 'Text'],
-		['rtf', 'RTF'],
-		['pptx', 'PowerPoint'],
-		['odp', 'OpenDocument presentation'],
-		['xlsx', 'Excel'],
-		['ods', 'OpenDocument spreadsheet'],
-		['image', 'Image'],
-		['video', 'Video'],
-		['website', 'Website'],
-		['youtube', 'YouTube'],
-		['other', 'Other']
-	];
 
 	const humanize = (value: string) => value.replaceAll('_', ' ');
 	const showStatus = $derived(data.canModerate || resource.status !== 'verified');
@@ -106,7 +51,7 @@
 
 <section class="resource-detail">
 	<div class="resource-detail-nav">
-		<a class="btn-ghost" href="/resources">Back to resources</a>
+		<a class="btn-secondary" href="/resources">Back to resources</a>
 	</div>
 
 	<header class="resource-detail-header">
@@ -149,7 +94,7 @@
 			</div>
 
 			{#if data.canEditResource}
-				<button type="button" class="btn-ghost" onclick={() => (editing = !editing)}>
+				<button type="button" class="btn-secondary" onclick={() => (editing = !editing)}>
 					{editing
 						? 'Close editor'
 						: data.canModerate
@@ -200,7 +145,7 @@
 					<label>
 						<span>Subject</span>
 						<select name="subject" required>
-							{#each subjects as subject}
+							{#each RESOURCE_SUBJECTS as subject}
 								<option value={subject} selected={resource.subject === subject}>{subject}</option>
 							{/each}
 						</select>
@@ -210,7 +155,7 @@
 						<span>Year group</span>
 						<select name="yearGroup">
 							<option value="" selected={resource.yearGroup === null}>Any</option>
-							{#each [8, 9, 10, 11, 12, 13] as year}
+							{#each RESOURCE_YEAR_GROUPS as year}
 								<option value={year} selected={resource.yearGroup === year}>Year {year}</option>
 							{/each}
 						</select>
@@ -219,7 +164,7 @@
 					<label>
 						<span>Course</span>
 						<select name="curriculum">
-							{#each courses as [value, label]}
+							{#each RESOURCE_COURSE_OPTIONS as [value, label]}
 								<option value={value} selected={(resource.curriculum ?? '') === value}>{label}</option>
 							{/each}
 						</select>
@@ -228,8 +173,8 @@
 					<label>
 						<span>Level</span>
 						<select name="level">
-							{#each levels as [value, label]}
-								<option value={value} selected={(resource.level ?? '') === value}>{label}</option>
+							{#each RESOURCE_LEVEL_OPTIONS as [value, label]}
+								<option value={value} selected={(resource.level ?? '') === value}>{value === '' ? 'None' : label}</option>
 							{/each}
 						</select>
 					</label>
@@ -237,7 +182,7 @@
 					<label>
 						<span>Purpose</span>
 						<select name="type" required>
-							{#each types as [value, label]}
+							{#each RESOURCE_TYPE_OPTIONS as [value, label]}
 								<option value={value} selected={resource.type === value}>{label}</option>
 							{/each}
 						</select>
@@ -246,7 +191,7 @@
 					<label>
 						<span>Format</span>
 						<select name="format">
-							{#each formats as [value, label]}
+							{#each RESOURCE_FORMAT_OPTIONS_WITH_AUTO as [value, label]}
 								<option value={value} selected={(resource.format ?? '') === value}>{label}</option>
 							{/each}
 						</select>
@@ -265,7 +210,7 @@
 
 				<div class="resource-detail-form-actions">
 					<button class="btn" type="submit">Save changes</button>
-					<button class="btn-ghost" type="button" onclick={() => (editing = false)}>Cancel</button>
+					<button class="btn-secondary" type="button" onclick={() => (editing = false)}>Cancel</button>
 				</div>
 			</form>
 		</section>
@@ -374,7 +319,7 @@
 			<div class="resource-danger-actions">
 				{#if data.canBinResource}
 					<form method="POST" action="?/binResource">
-						<button class="btn-ghost danger-text" type="submit">
+						<button class="btn-secondary danger-text" type="submit">
 							Move to bin
 						</button>
 					</form>
@@ -402,7 +347,7 @@
 								</button>
 
 								<button
-									class="btn-ghost"
+									class="btn-secondary"
 									type="button"
 									onclick={() => {
 										showPermanentDelete = false;

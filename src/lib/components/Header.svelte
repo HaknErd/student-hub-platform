@@ -26,7 +26,6 @@
 	<div class="mx-auto flex h-14 w-full max-w-6xl items-center gap-3 px-4 sm:px-6">
 		<a class="site-brand shrink-0" href="/">Student Hub</a>
 		<nav class="hidden items-center gap-1 md:flex" aria-label="Primary">
-			<a class="rounded-md px-3 py-2 text-sm text-text-muted no-underline hover:bg-bg hover:text-text" href="/">Home</a>
 			<a class="rounded-md px-3 py-2 text-sm text-text-muted no-underline hover:bg-bg hover:text-text" href="/resources">Resources</a>
 			{#if user}
 				<a class="rounded-md px-3 py-2 text-sm text-text-muted no-underline hover:bg-bg hover:text-text" href="/search">Search</a>
@@ -40,7 +39,7 @@
 					placeholder="Search users or resources"
 					autocomplete="off"
 					aria-label="Global search"
-					class="h-9 w-full rounded-md border border-border bg-bg px-3 text-sm text-text outline-none transition focus-visible:border-primary focus-visible:ring-2 focus-visible:ring-primary/25"
+					class="field-control w-full"
 				/>
 			</form>
 			<div class="ml-auto hidden md:block">

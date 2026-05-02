@@ -21,7 +21,7 @@
 			<h1>Server settings</h1>
 		</div>
 
-		<a href="/account" class="btn-ghost">Back to settings</a>
+		<a href="/account" class="btn-secondary">Back to settings</a>
 	</header>
 
 	<div class="settings-shell">

@@ -4,22 +4,7 @@
 	import Header from '$lib/components/Header.svelte';
 	import Footer from '$lib/components/Footer.svelte';
 
-
 	let { data, children } = $props();
-
-	const theme = $derived(String(data.user?.settings?.theme ?? 'system'));
-
-	$effect(() => {
-		if (typeof document === 'undefined') return;
-
-		const root = document.documentElement;
-
-		if (theme === 'light' || theme === 'dark') {
-			root.dataset.theme = theme;
-		} else {
-			delete root.dataset.theme;
-		}
-	});
 </script>
 
 <svelte:head><link rel="icon" href={favicon} /></svelte:head>

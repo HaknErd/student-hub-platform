@@ -1,4 +1,4 @@
-export type AvatarShape = 'rounded-xl' | 'rounded-full';
+import type { AvatarShape } from '$lib/types/profile';
 
 export type User = {
 	id: string;
@@ -32,3 +32,13 @@ export type PublicProfile = {
 	bannerPictureHash: string | null;
 	settings: Record<string, unknown>;
 };
+
+const MODERATION_ROLES = new Set(['prefect', 'teacher', 'admin']);
+
+export function canModerateRole(role: string | null | undefined): boolean {
+	return Boolean(role && MODERATION_ROLES.has(role));
+}
+
+export function isAdminRole(role: string | null | undefined): boolean {
+	return role === 'admin';
+}

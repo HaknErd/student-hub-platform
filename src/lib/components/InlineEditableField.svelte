@@ -88,10 +88,10 @@
 			/>
 
 			<div class="inline-edit-actions">
-				<button type="submit" class="btn btn-sm" disabled={saving}>
+				<button type="submit" class="btn" disabled={saving}>
 					{saving ? 'Saving...' : 'Save'}
 				</button>
-				<button type="button" class="btn-ghost btn-sm" onclick={cancelEdit} disabled={saving}>
+				<button type="button" class="btn-secondary" onclick={cancelEdit} disabled={saving}>
 					Cancel
 				</button>
 			</div>

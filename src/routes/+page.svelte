@@ -1,31 +1,22 @@
 <script lang="ts">
-	import { onMount } from 'svelte';
 	import TextFieldHero from '../lib/components/TextFieldHero.svelte';
 
 	let { data } = $props();
 
 	const firstName = $derived(data.user?.firstName ?? null);
 	const accessName = $derived(firstName?.toUpperCase() ?? null);
-
-	onMount(() => {
-		document.documentElement.dataset.homeTheme = 'terminal';
-
-		return () => {
-			delete document.documentElement.dataset.homeTheme;
-		};
-	});
 </script>
 
 <svelte:head>
 	<title>Student Hub</title>
 </svelte:head>
 
-<section class="student-terminal-home">
+<section class="student-home">
 	<TextFieldHero signature={accessName} />
 
-	<div class="terminal-vignette"></div>
+	<div class="home-vignette"></div>
 
-	<div class="terminal-actions" aria-label="Primary actions">
+	<div class="home-actions" data-hero-reveal aria-label="Primary actions">
 		<a href="/resources">Resources</a>
 		{#if data.user}
 			<a href="/search">Search</a>
@@ -36,68 +27,13 @@
 </section>
 
 <style>
-	:global(html[data-home-theme='terminal']) {
-		background: #161713;
-		color-scheme: dark;
-	}
-
-	:global(.page-container.app-content:has(.student-terminal-home)) {
+	:global(.page-container.app-content:has(.student-home)) {
 		width: 100%;
 		max-width: none;
 		padding: 0;
 	}
 
-	:global(body:has(.student-terminal-home) .site-header) {
-		position: relative;
-		z-index: 50;
-	}
-
-	:global(html[data-home-theme='terminal'] body),
-	:global(html[data-home-theme='terminal'] .app-shell) {
-		background: #161713;
-		color: #f2f1ec;
-	}
-
-	:global(html[data-home-theme='terminal'] .page-container.app-content) {
-		max-width: none;
-		padding: 0;
-	}
-
-	:global(html[data-home-theme='terminal'] .site-header),
-	:global(html[data-home-theme='terminal'] .site-footer) {
-		background: #161713;
-		border-color: rgba(242, 241, 236, 0.14);
-		color: #f2f1ec;
-		font-family: 'Berkeley Mono', 'IBM Plex Mono', 'JetBrains Mono', monospace;
-	}
-
-	:global(html[data-home-theme='terminal'] .site-header a),
-	:global(html[data-home-theme='terminal'] .site-footer a),
-	:global(html[data-home-theme='terminal'] .site-footer__title) {
-		color: #f2f1ec;
-	}
-
-	:global(html[data-home-theme='terminal'] .site-header a:hover),
-	:global(html[data-home-theme='terminal'] .site-footer a:hover) {
-		color: var(--color-accent);
-		background: color-mix(in srgb, var(--color-accent) 8%, transparent);
-	}
-
-	:global(html[data-home-theme='terminal'] .site-footer__tagline),
-	:global(html[data-home-theme='terminal'] .site-footer__meta) {
-		color: rgba(242, 241, 236, 0.58);
-	}
-
-	:global(html[data-home-theme='terminal'] .auth-login),
-	:global(html[data-home-theme='terminal'] .auth-chip),
-	:global(html[data-home-theme='terminal'] .site-header input),
-	:global(html[data-home-theme='terminal'] button) {
-		border-color: rgba(242, 241, 236, 0.18);
-		background: rgba(22, 23, 19, 0.82);
-		color: #f2f1ec;
-	}
-
-	.student-terminal-home {
+	.student-home {
 		position: relative;
 		width: 100vw;
 		margin-left: calc(50% - 50vw);
@@ -105,25 +41,24 @@
 		min-height: calc(100svh - 3.5rem);
 		overflow: hidden;
 		background:
-			linear-gradient(90deg, rgba(242, 241, 236, 0.055) 1px, transparent 1px),
-			linear-gradient(180deg, rgba(242, 241, 236, 0.05) 1px, transparent 1px),
-			#161713;
+			linear-gradient(90deg, color-mix(in srgb, var(--color-text) 6%, transparent) 1px, transparent 1px),
+			linear-gradient(180deg, color-mix(in srgb, var(--color-text) 5%, transparent) 1px, transparent 1px),
+			var(--color-bg);
 		background-size: 6px 8px;
-		color: #f2f1ec;
-		font-family: 'Berkeley Mono', 'IBM Plex Mono', 'JetBrains Mono', monospace;
+		color: var(--color-text);
 	}
 
-	.terminal-vignette {
+	.home-vignette {
 		position: absolute;
 		inset: 0;
 		pointer-events: none;
 		background:
-			linear-gradient(90deg, rgba(22, 23, 19, 0.22) 0%, rgba(22, 23, 19, 0.12) 42%, rgba(22, 23, 19, 0.04) 72%),
-			linear-gradient(180deg, rgba(22, 23, 19, 0.08) 0%, rgba(22, 23, 19, 0.24) 100%);
+			linear-gradient(90deg, color-mix(in srgb, var(--color-bg) 22%, transparent) 0%, color-mix(in srgb, var(--color-bg) 12%, transparent) 42%, transparent 72%),
+			linear-gradient(180deg, color-mix(in srgb, var(--color-bg) 8%, transparent) 0%, color-mix(in srgb, var(--color-bg) 24%, transparent) 100%);
 	}
 
 
-	.terminal-actions {
+	.home-actions {
 		position: absolute;
 		left: clamp(16px, 5vw, 80px);
 		bottom: clamp(20px, 6vh, 72px);
@@ -131,62 +66,44 @@
 		display: flex;
 		flex-wrap: wrap;
 		gap: 12px;
-		animation: terminal-content-in 640ms cubic-bezier(0.2, 0.84, 0.2, 1) 1.32s both;
 	}
 
-	.terminal-actions a {
+	.home-actions a {
 		display: inline-flex;
 		align-items: center;
 		justify-content: center;
 		min-height: 44px;
-		border: 1px solid rgba(242, 241, 236, 0.2);
+		border: 1px solid var(--color-border);
 		padding: 0 16px;
-		color: #f2f1ec;
-		background: rgba(22, 23, 19, 0.58);
+		color: var(--color-text);
+		background: color-mix(in srgb, var(--color-bg) 82%, transparent);
 		font-size: 0.94rem;
 		text-decoration: none;
 	}
 
-	.terminal-actions a:first-child {
+	.home-actions a:first-child {
 		border-color: var(--color-accent);
 		background: var(--color-accent);
 		color: var(--color-accent-contrast);
 	}
 
-	.terminal-actions a:hover {
+	.home-actions a:hover {
 		border-color: var(--color-accent);
 		color: var(--color-accent);
 	}
 
-	.terminal-actions a:first-child:hover {
+	.home-actions a:first-child:hover {
 		color: var(--color-accent-contrast);
 		background: var(--color-accent-hover);
 	}
-	@keyframes terminal-content-in {
-		from {
-			opacity: 0;
-			transform: translateY(8px);
-		}
-		to {
-			opacity: 1;
-			transform: translateY(0);
-		}
-	}
-
-
 	@media (max-width: 1023px) {
-		.student-terminal-home {
+		.student-home {
 			min-height: calc(100svh - 3.5rem);
 		}
 
-		.terminal-vignette {
-			background: linear-gradient(180deg, rgba(22, 23, 19, 0.08), rgba(22, 23, 19, 0.32));
+		.home-vignette {
+			background: linear-gradient(180deg, color-mix(in srgb, var(--color-bg) 8%, transparent), color-mix(in srgb, var(--color-bg) 32%, transparent));
 		}
 	}
 
-	@media (prefers-reduced-motion: reduce) {
-		.terminal-actions {
-			animation: none;
-		}
-	}
 </style>

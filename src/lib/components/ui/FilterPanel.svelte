@@ -8,7 +8,7 @@
 </script>
 
 <div class="space-y-3">
-	<p class="text-xs font-semibold uppercase tracking-wide text-text-muted">{title}</p>
+	<p class="section-eyebrow">{title}</p>
 	<div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
 		{@render children?.()}
 	</div>
